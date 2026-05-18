@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+build/
+dist/
+*.spec
+pinyin_app/config.json
+pinyin_app/pinyin_app.log
