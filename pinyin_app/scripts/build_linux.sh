@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
-pyinstaller --onefile --noconsole --name pinyin_app src/pinyin_live.py
-echo "Binario generado en dist/"
+python3 scripts/build_release.py --platform linux
+echo "Build Linux completo en dist/pinyin_app_release/linux"

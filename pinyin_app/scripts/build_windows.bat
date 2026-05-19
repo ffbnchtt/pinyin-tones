@@ -1,4 +1,4 @@
 @echo off
-pyinstaller --onefile --noconsole --name pinyin_app src\pinyin_live.py
-echo Ejecutable en dist\
+python scripts\build_release.py --platform windows
+echo Build Windows completo en dist\pinyin_app_release\windows
 pause

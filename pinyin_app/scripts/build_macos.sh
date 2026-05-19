@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
-pyinstaller --onefile --windowed --name pinyin_app src/pinyin_live.py
-echo "Aplicación generada en dist/"
+python3 scripts/build_release.py --platform macos
+echo "Build macOS completo en dist/pinyin_app_release/macos"
