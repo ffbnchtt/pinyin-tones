@@ -34,10 +34,11 @@ try:
 except ImportError:
     winreg = None
 
-try:
-    from pinyin_converter import convert_pinyin_token, has_vowel
-except ImportError:
-    from .pinyin_converter import convert_pinyin_token, has_vowel
+if getattr(sys, 'frozen', False):
+    base_dir = getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
+    sys.path.insert(0, os.path.join(base_dir, 'src'))
+
+from pinyin_converter import convert_pinyin_token
 
 
 # Paths

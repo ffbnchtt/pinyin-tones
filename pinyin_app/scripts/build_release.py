@@ -21,6 +21,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 APP_DIR = ROOT_DIR
+SRC_DIR = APP_DIR / 'src'
 SRC_PATH = APP_DIR / 'src' / 'pinyin_live.py'
 DIST_DIR = APP_DIR / 'dist'
 BUILD_DIR = APP_DIR / 'build'
@@ -113,6 +114,10 @@ def build_pyinstaller_command(platform_name: str, icon_assets: dict[str, Path]) 
         '--name',
         APP_NAME,
         '--clean',
+        '--paths',
+        str(SRC_DIR),
+        '--hidden-import',
+        'pinyin_converter',
         str(SRC_PATH),
     ]
     if platform_name == 'windows':
