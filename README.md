@@ -4,8 +4,8 @@ Conversor de tonos Pinyin en tiempo real, con listener global, icono en bandeja 
 
 ## Estructura
 
-- `pinyin_app/src/pinyin_converter.py`: reglas de conversión.
-- `pinyin_app/src/pinyin_live.py`: listeners, tray icon y reemplazo en vivo.
+- `pinyin_app/pinyin_converter.py`: reglas de conversión.
+- `pinyin_app/pinyin_live.py`: listeners, tray icon y reemplazo en vivo.
 - `tests/`: pruebas automatizadas.
 - `docs/ARCHITECTURE.md`: cómo está programada la app.
 - `docs/DOWNLOAD.md`: cómo instalar, ejecutar y compilar.
@@ -16,7 +16,7 @@ Conversor de tonos Pinyin en tiempo real, con listener global, icono en bandeja 
 ```bash
 cd pinyin_app
 pip install -r requirements.txt
-python src/pinyin_live.py
+python pinyin_live.py
 ```
 
 ## Pruebas

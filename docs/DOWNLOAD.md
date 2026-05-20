@@ -1,25 +1,24 @@
-# Download and Build
+# Descargar y compilar
 
-## For users
+## Para usuarios
 
-If you only want to use the app, the project is designed to be packaged with PyInstaller into a standalone executable.
-The settings window includes an option to start the app automatically with the operating system.
+Si solo quieres usar la aplicación, el proyecto está diseñado para empaquetarse con PyInstaller en un ejecutable independiente. La ventana de configuración incluye una opción para iniciar la aplicación automáticamente con el sistema operativo.
 
-## For developers
+## Para desarrolladores
 
-Install dependencies and run locally:
+Instalar dependencias y ejecutar en desarrollo:
 
-```bash
+```powershell
 cd pinyin_app
 pip install -r requirements.txt
-python src/pinyin_live.py
+python pinyin_live.py
 ```
 
-Build examples (recommended):
+Construcción recomendada (usa el helper de release):
 
 Windows:
 
-```cmd
+```powershell
 python pinyin_app\scripts\build_release.py --platform windows
 ```
 
@@ -35,28 +34,28 @@ Linux:
 python3 pinyin_app/scripts/build_release.py --platform linux
 ```
 
-Build examples (direct PyInstaller):
+Ejemplos directos con PyInstaller (solo si necesitas personalizar):
 
 Windows:
 
 ```cmd
-pyinstaller --onefile --noconsole --name pinyin_app --paths src --hidden-import pinyin_converter src/pinyin_live.py
+pyinstaller --onefile --noconsole --name pinyin_app --paths pinyin_app --hidden-import pinyin_app.pinyin_converter pinyin_app/pinyin_live.py
 ```
 
 macOS:
 
 ```bash
-pyinstaller --onefile --windowed --name pinyin_app --paths src --hidden-import pinyin_converter src/pinyin_live.py
+pyinstaller --onefile --windowed --name pinyin_app --paths pinyin_app --hidden-import pinyin_app.pinyin_converter pinyin_app/pinyin_live.py
 ```
 
 Linux:
 
 ```bash
-pyinstaller --onefile --noconsole --name pinyin_app --paths src --hidden-import pinyin_converter src/pinyin_live.py
+pyinstaller --onefile --noconsole --name pinyin_app --paths pinyin_app --hidden-import pinyin_app.pinyin_converter pinyin_app/pinyin_live.py
 ```
 
-## Autostart behavior
+## Comportamiento de inicio automático
 
-- Windows writes a value under `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`.
-- macOS writes a `LaunchAgent` plist in `~/Library/LaunchAgents`.
-- Linux writes a desktop autostart entry in `~/.config/autostart`.
+- Windows escribe una entrada en `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`.
+- macOS escribe un `LaunchAgent` plist en `~/Library/LaunchAgents`.
+- Linux escribe un archivo desktop en `~/.config/autostart`.

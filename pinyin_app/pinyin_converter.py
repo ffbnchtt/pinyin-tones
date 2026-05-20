@@ -17,7 +17,7 @@ TONES_MAP = {
     ('v', 1): 'ǖ', ('v', 2): 'ǘ', ('v', 3): 'ǚ', ('v', 4): 'ǜ',  # ü
 }
 
-# Para preservar mayúsculas: convertir la vocal resultante si la original era mayúscula
+
 def _apply_case(original_char: str, new_char: str) -> str:
     """Si original_char es mayúscula, devuelve new_char en mayúscula (si existe)."""
     if original_char.isupper():
@@ -75,8 +75,6 @@ def apply_tone(syllable: str, tone_number: int) -> str:
     vowel_key = original_vowel.lower()
     if vowel_key == 'ü':
         vowel_key = 'v'
-    if vowel_key == 'ü':
-        vowel_key = 'v'
     if vowel_key == 'v':
         lookup_key = 'v'
     else:
@@ -108,8 +106,11 @@ def convert_pinyin_token(token: str) -> str:
         return converted
     return token  # fallback
 
+
 # Opcional: validación de sílaba plausible (para evitar conversiones no deseadas)
 PINYIN_VOWELS = set('aeiouvüAEIOUVÜ')
 
+
 def has_vowel(s: str) -> bool:
+    """Return True when the string contains a pinyin vowel."""
     return any(ch in PINYIN_VOWELS for ch in s)

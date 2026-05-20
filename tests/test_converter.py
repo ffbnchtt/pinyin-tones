@@ -1,6 +1,6 @@
 import unittest
 
-from pinyin_app.src.pinyin_converter import convert_pinyin_token, has_vowel
+from pinyin_app.pinyin_converter import convert_pinyin_token, has_vowel
 
 
 class TestPinyinConverter(unittest.TestCase):

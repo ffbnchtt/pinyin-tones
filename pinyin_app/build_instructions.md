@@ -6,7 +6,7 @@ Instalación en desarrollo:
 
 ```bash
 pip install -r requirements.txt
-python src/pinyin_live.py
+python pinyin_live.py
 ```
 
 Compilación con el script de release (recomendado):
@@ -34,19 +34,19 @@ Compilación directa con PyInstaller (ejemplos):
 Windows:
 
 ```cmd
-pyinstaller --onefile --noconsole --name pinyin_app --paths src --hidden-import pinyin_converter src/pinyin_live.py
+pyinstaller --onefile --noconsole --name pinyin_app --paths pinyin_app --hidden-import pinyin_app.pinyin_converter pinyin_app/pinyin_live.py
 ```
 
 macOS:
 
 ```bash
-pyinstaller --onefile --windowed --name pinyin_app --paths src --hidden-import pinyin_converter src/pinyin_live.py
+pyinstaller --onefile --windowed --name pinyin_app --paths pinyin_app --hidden-import pinyin_app.pinyin_converter pinyin_app/pinyin_live.py
 ```
 
 Linux:
 
 ```bash
-pyinstaller --onefile --noconsole --name pinyin_app --paths src --hidden-import pinyin_converter src/pinyin_live.py
+pyinstaller --onefile --noconsole --name pinyin_app --paths pinyin_app --hidden-import pinyin_app.pinyin_converter pinyin_app/pinyin_live.py
 ```
 
 Permisos especiales:

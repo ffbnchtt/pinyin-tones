@@ -1,22 +1,22 @@
-# Architecture
+# Arquitectura
 
-## Runtime flow
+## Flujo en tiempo de ejecución
 
-- `pinyin_app/src/pinyin_live.py` starts the global keyboard listeners and the tray icon.
-- `pinyin_app/src/pinyin_converter.py` converts tokens like `ni3` or `hao3` to tone-marked output.
-- The live listener keeps a small buffer, detects the configured hotkey, and replaces the last token using clipboard-based paste for Unicode reliability.
+- `pinyin_app/pinyin_live.py` inicia los listeners globales de teclado y el icono en la bandeja.
+- `pinyin_app/pinyin_converter.py` convierte tokens como `ni3` o `hao3` en pinyin con marcas de tono.
+- El listener en vivo mantiene un buffer pequeño, detecta el atajo configurado y reemplaza el último token usando el portapapeles para asegurar la compatibilidad Unicode.
 
-## Components
+## Componentes
 
-- Tray icon: shows active/inactive state and opens the settings dialog using the shared app badge.
-- Settings dialog: captures the hotkey directly from pressed keys and stores it in `pinyin_app/config.json`.
-- The dialog keeps the CTA buttons aligned to the right and uses a readonly preview so the user records shortcuts instead of typing them manually.
-- The dialog also includes an "iniciar con el sistema" toggle that writes the native startup entry for Windows, macOS, or Linux.
-- Logging: writes to `pinyin_app/pinyin_app.log` for debugging.
-- Quitting from the tray signals the main loop to exit cleanly.
+- Icono en bandeja: muestra el estado activo/inactivo y abre la ventana de configuración.
+- Diálogo de configuración: captura el atajo directamente desde las teclas presionadas y lo guarda en `pinyin_app/config.json`.
+- El diálogo usa una vista previa de solo lectura y botones alineados para una experiencia sencilla.
+- La opción "Iniciar con el sistema" escribe la entrada nativa correspondiente en Windows, macOS o Linux.
+- Registro (logging): se escribe en `pinyin_app/pinyin_app.log` para depuración.
+- Salir desde la bandeja envía la señal para terminar el bucle principal de forma ordenada.
 
-## Design goals
+## Objetivos de diseño
 
-- Minimal dependencies.
-- Cross-platform behavior on Windows, macOS, and Linux where `pynput` supports it.
-- Fast live replacement with low interruption to typing.
+- Dependencias mínimas.
+- Comportamiento multiplataforma en Windows, macOS y Linux (cuando `pynput` lo soporta).
+- Reemplazo en vivo rápido y con mínima interrupción a la escritura.

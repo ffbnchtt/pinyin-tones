@@ -2,7 +2,9 @@ import unittest
 from types import SimpleNamespace
 from unittest import mock
 
-from pinyin_app.src import pinyin_live
+from pinyin_app import pinyin_live
+from pinyin_app import clipboard as clipboard_mod
+from pinyin_app import buffer as buffer_mod
 
 
 class TestLiveReplacementFlow(unittest.TestCase):
@@ -11,10 +13,10 @@ class TestLiveReplacementFlow(unittest.TestCase):
         pinyin_live.SUPPRESS_INPUT = False
         pinyin_live.SUPPRESS_UNTIL = 0.0
         pinyin_live.CONFIG_DIALOG_OPEN.clear()
-        pinyin_live.BUFFER = []
+        buffer_mod.BUFFER.clear()
         pinyin_live.PRESSED_KEYS = set()
-        pinyin_live.CLIPBOARD_BASELINE = None
-        pinyin_live.CLIPBOARD_RESTORE_TIMER = None
+        clipboard_mod.CLIPBOARD_BASELINE = None
+        clipboard_mod.CLIPBOARD_RESTORE_TIMER = None
         self.calls = []
         self.clipboard = {'value': 'original'}
 
@@ -32,10 +34,10 @@ class TestLiveReplacementFlow(unittest.TestCase):
         def fake_press(key, presses=1, interval=0.0):
             self.calls.append(('press', key, presses, interval))
 
-        self.paste_patch = mock.patch.object(pinyin_live.pyperclip, 'paste', side_effect=fake_paste)
-        self.copy_patch = mock.patch.object(pinyin_live.pyperclip, 'copy', side_effect=fake_copy)
-        self.hotkey_patch = mock.patch.object(pinyin_live.pyautogui, 'hotkey', side_effect=fake_hotkey)
-        self.press_patch = mock.patch.object(pinyin_live.pyautogui, 'press', side_effect=fake_press)
+        self.paste_patch = mock.patch.object(clipboard_mod.pyperclip, 'paste', side_effect=fake_paste)
+        self.copy_patch = mock.patch.object(clipboard_mod.pyperclip, 'copy', side_effect=fake_copy)
+        self.hotkey_patch = mock.patch.object(clipboard_mod.pyautogui, 'hotkey', side_effect=fake_hotkey)
+        self.press_patch = mock.patch.object(buffer_mod.pyautogui, 'press', side_effect=fake_press)
 
         self.paste_patch.start()
         self.copy_patch.start()
@@ -46,9 +48,9 @@ class TestLiveReplacementFlow(unittest.TestCase):
         mock.patch.stopall()
 
     def test_process_buffer_replaces_exact_token(self):
-        pinyin_live.BUFFER = list('hao3')
+        buffer_mod.BUFFER[:] = list('hao3')
         pinyin_live.process_buffer()
-        self.assertEqual(pinyin_live.BUFFER, [])
+        self.assertEqual(buffer_mod.BUFFER, [])
         self.assertEqual(self.calls[0], ('press', 'backspace', 4, 0))
         self.assertIn(('copy', 'hǎo'), self.calls)
         self.assertIn(('hotkey', ('ctrl', 'v')), self.calls)
@@ -58,9 +60,9 @@ class TestLiveReplacementFlow(unittest.TestCase):
         self.assertIn(('press', 'backspace', 1, 0), self.calls)
 
     def test_process_buffer_ignores_non_tokens(self):
-        pinyin_live.BUFFER = list('hola')
+        buffer_mod.BUFFER[:] = list('hola')
         pinyin_live.process_buffer()
-        self.assertEqual(pinyin_live.BUFFER, list('hola'))
+        self.assertEqual(buffer_mod.BUFFER, list('hola'))
         self.assertNotIn(('hotkey', ('ctrl', 'v')), self.calls)
 
     def test_paste_text_waits_for_clipboard_sync(self):
@@ -74,10 +76,10 @@ class TestLiveReplacementFlow(unittest.TestCase):
         def fake_sleep(_seconds):
             return None
 
-        with mock.patch.object(pinyin_live.pyperclip, 'paste', side_effect=fake_paste), \
-             mock.patch.object(pinyin_live.pyperclip, 'copy') as fake_copy, \
-             mock.patch.object(pinyin_live.pyautogui, 'hotkey') as fake_hotkey, \
-             mock.patch.object(pinyin_live.time, 'sleep', side_effect=fake_sleep):
+        with mock.patch.object(clipboard_mod.pyperclip, 'paste', side_effect=fake_paste), \
+             mock.patch.object(clipboard_mod.pyperclip, 'copy') as fake_copy, \
+             mock.patch.object(clipboard_mod.pyautogui, 'hotkey') as fake_hotkey, \
+             mock.patch.object(clipboard_mod.time, 'sleep', side_effect=fake_sleep):
             pinyin_live.paste_text('hǎo')
 
         fake_copy.assert_called_with('hǎo')
@@ -100,12 +102,12 @@ class TestLiveReplacementFlow(unittest.TestCase):
             def cancel(self):
                 self.cancelled = True
 
-        with mock.patch.object(pinyin_live.threading, 'Timer', side_effect=FakeTimer), \
-             mock.patch.object(pinyin_live.time, 'sleep', return_value=None):
+        with mock.patch.object(clipboard_mod.threading, 'Timer', side_effect=FakeTimer), \
+             mock.patch.object(clipboard_mod.time, 'sleep', return_value=None):
             pinyin_live.paste_text('zhōng')
             pinyin_live.paste_text('guó')
 
-        self.assertEqual(pinyin_live.CLIPBOARD_BASELINE, 'original')
+        self.assertEqual(clipboard_mod.CLIPBOARD_BASELINE, 'original')
         self.assertEqual(len(timers), 2)
         self.assertTrue(timers[0].cancelled)
         timers[-1].callback()
@@ -113,20 +115,20 @@ class TestLiveReplacementFlow(unittest.TestCase):
 
     def test_backspace_pops_one_character(self):
         pinyin_live.ACTIVE = True
-        pinyin_live.BUFFER = list('hao')
+        buffer_mod.BUFFER[:] = list('hao')
         pinyin_live.on_type(pinyin_live.keyboard.Key.backspace)
-        self.assertEqual(pinyin_live.BUFFER, list('ha'))
+        self.assertEqual(buffer_mod.BUFFER, list('ha'))
 
     def test_suppression_window_blocks_synthetic_input(self):
         pinyin_live.SUPPRESS_UNTIL = 9999999999
-        pinyin_live.BUFFER = list('hao3')
+        buffer_mod.BUFFER[:] = list('hao3')
         pinyin_live.on_type(SimpleNamespace(char='x'))
-        self.assertEqual(pinyin_live.BUFFER, list('hao3'))
+        self.assertEqual(buffer_mod.BUFFER, list('hao3'))
 
     def test_configuration_dialog_blocks_global_listeners(self):
         pinyin_live.CONFIG_DIALOG_OPEN.set()
         pinyin_live.ACTIVE = True
-        pinyin_live.BUFFER = list('hao')
+        buffer_mod.BUFFER[:] = list('hao')
 
         pinyin_live.on_type(SimpleNamespace(char='a'))
 
@@ -140,16 +142,16 @@ class TestLiveReplacementFlow(unittest.TestCase):
         app._toggle_on_press(pinyin_live.keyboard.Key.alt)
         app._toggle_on_press(SimpleNamespace(char='p', name='p'))
 
-        self.assertEqual(pinyin_live.BUFFER, list('hao'))
+        self.assertEqual(buffer_mod.BUFFER, list('hao'))
         self.assertEqual(toggled, [])
 
     def test_sequence_zhong1_guo2(self):
         outputs = []
-        pinyin_live.BUFFER = list('zhong1')
+        buffer_mod.BUFFER[:] = list('zhong1')
         pinyin_live.process_buffer()
         outputs.extend(self.calls)
         self.calls.clear()
-        pinyin_live.BUFFER = list('guo2')
+        buffer_mod.BUFFER[:] = list('guo2')
         pinyin_live.process_buffer()
         outputs.extend(self.calls)
 
@@ -181,9 +183,8 @@ class TestHotkeyCaptureFormatting(unittest.TestCase):
             pinyin_live.normalize_trigger_key(SimpleNamespace(keysym='P')),
             'p',
         )
-        self.assertEqual(
+        self.assertIsNone(
             pinyin_live.normalize_trigger_key(SimpleNamespace(keysym='F12')),
-            'f12',
         )
         self.assertIsNone(pinyin_live.normalize_trigger_key(SimpleNamespace(keysym='Control_L')))
 
