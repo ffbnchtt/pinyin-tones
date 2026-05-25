@@ -8,6 +8,7 @@ import plistlib
 import shlex
 import subprocess
 import sys
+import logging
 from dataclasses import dataclass
 from typing import List
 
@@ -15,6 +16,8 @@ try:
     import winreg
 except ImportError:  # pragma: no cover - non-Windows platforms
     winreg = None
+
+logger = logging.getLogger('pinyin_app')
 
 
 @dataclass(frozen=True)
@@ -129,4 +132,5 @@ def sync_autostart_setting(enabled: bool, config: AutostartConfig) -> bool:
             set_linux_autostart(enabled, config)
         return True
     except Exception:
+        logger.exception('Failed to sync autostart setting')
         return False

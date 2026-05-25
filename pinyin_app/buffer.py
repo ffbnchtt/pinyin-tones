@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import threading
 import logging
+import time
 
 try:
     import pyautogui
@@ -17,6 +18,26 @@ logger = logging.getLogger('pinyin_app')
 
 BUFFER: list[str] = []
 BUFFER_LOCK = threading.Lock()
+SUPPRESS_LOCK = threading.Lock()
+SUPPRESS_UNTIL = 0.0
+SUPPRESS_DURATION = 0.25
+
+
+def suppress_input_for(duration: float) -> None:
+    """Suppress synthetic key handling briefly after programmatic input."""
+    if duration <= 0:
+        return
+    deadline = time.monotonic() + duration
+    with SUPPRESS_LOCK:
+        global SUPPRESS_UNTIL
+        if deadline > SUPPRESS_UNTIL:
+            SUPPRESS_UNTIL = deadline
+
+
+def is_input_suppressed() -> bool:
+    """Return True while synthetic input suppression window is active."""
+    with SUPPRESS_LOCK:
+        return time.monotonic() < SUPPRESS_UNTIL
 
 
 def reset_buffer() -> None:
@@ -45,7 +66,7 @@ def process_buffer() -> None:
         return
     logger.info(f"Converting token '{current}' -> '{converted}'")
     try:
-        # synthetic input suppression is handled by the caller
+        suppress_input_for(SUPPRESS_DURATION)
         delete_last_token()
         paste_text(converted)
     finally:

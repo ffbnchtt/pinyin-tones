@@ -27,6 +27,7 @@ DIST_DIR = APP_DIR / 'dist'
 BUILD_DIR = APP_DIR / 'build'
 RELEASE_DIR = DIST_DIR / 'pinyin_app_release'
 ASSET_DIR = BUILD_DIR / 'branding'
+TRAY_ASSET_DIR = APP_DIR / 'assets' / 'tray'
 APP_NAME = 'pinyin_app'
 APP_TITLE = 'Pinyin Tones'
 APP_ID = 'pinyin-tones'
@@ -120,6 +121,10 @@ def build_pyinstaller_command(platform_name: str, icon_assets: dict[str, Path]) 
         'pinyin_app.pinyin_converter',
         str(SRC_PATH),
     ]
+    if TRAY_ASSET_DIR.exists():
+        data_sep = ';' if platform_name == 'windows' else ':'
+        data_spec = f'{TRAY_ASSET_DIR}{data_sep}pinyin_app/assets/tray'
+        command.extend(['--add-data', data_spec])
     if platform_name == 'windows':
         command.insert(4, '--noconsole')
         command.extend(['--icon', str(icon_assets['ico'])])

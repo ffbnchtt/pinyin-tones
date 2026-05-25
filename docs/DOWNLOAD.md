@@ -54,6 +54,12 @@ Linux:
 pyinstaller --onefile --noconsole --name pinyin_app --paths pinyin_app --hidden-import pinyin_app.pinyin_converter pinyin_app/pinyin_live.py
 ```
 
+## Iconos del tray
+
+- Los PNG del tray se cargan desde `pinyin_app/assets/tray`.
+- Mantén variantes en 16/20/24/32/64 px con el prefijo `tray_quicksand_a_macron_`.
+- El helper `build_release.py` empaqueta esos assets automáticamente cuando existen.
+
 ## Comportamiento de inicio automático
 
 - Windows escribe una entrada en `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`.

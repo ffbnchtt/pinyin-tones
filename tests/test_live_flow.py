@@ -10,8 +10,7 @@ from pinyin_app import buffer as buffer_mod
 class TestLiveReplacementFlow(unittest.TestCase):
     def setUp(self):
         pinyin_live.ACTIVE = False
-        pinyin_live.SUPPRESS_INPUT = False
-        pinyin_live.SUPPRESS_UNTIL = 0.0
+        buffer_mod.SUPPRESS_UNTIL = 0.0
         pinyin_live.CONFIG_DIALOG_OPEN.clear()
         buffer_mod.BUFFER.clear()
         pinyin_live.PRESSED_KEYS = set()
@@ -120,10 +119,16 @@ class TestLiveReplacementFlow(unittest.TestCase):
         self.assertEqual(buffer_mod.BUFFER, list('ha'))
 
     def test_suppression_window_blocks_synthetic_input(self):
-        pinyin_live.SUPPRESS_UNTIL = 9999999999
+        buffer_mod.SUPPRESS_UNTIL = 9999999999
         buffer_mod.BUFFER[:] = list('hao3')
         pinyin_live.on_type(SimpleNamespace(char='x'))
         self.assertEqual(buffer_mod.BUFFER, list('hao3'))
+
+    def test_process_buffer_sets_suppression_window(self):
+        buffer_mod.BUFFER[:] = list('hao3')
+        with mock.patch.object(buffer_mod.time, 'monotonic', return_value=1000.0):
+            pinyin_live.process_buffer()
+        self.assertGreaterEqual(buffer_mod.SUPPRESS_UNTIL, 1000.0)
 
     def test_configuration_dialog_blocks_global_listeners(self):
         pinyin_live.CONFIG_DIALOG_OPEN.set()
@@ -133,7 +138,7 @@ class TestLiveReplacementFlow(unittest.TestCase):
         pinyin_live.on_type(SimpleNamespace(char='a'))
 
         app = object.__new__(pinyin_live.PinyinApp)
-        app.hotkey = '<ctrl>+<alt>+p'
+        app.hotkey = '<ctrl>+<alt>+<shift>+p'
         app.hotkey_modifiers, app.hotkey_trigger = pinyin_live.parse_hotkey(app.hotkey)
         toggled = []
         app.toggle_active = lambda: toggled.append(True)
