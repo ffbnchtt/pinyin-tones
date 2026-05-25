@@ -63,7 +63,15 @@ class HotkeySettingsDialog:
         self.root.attributes('-topmost', True)
         self.root.title(self.dialog_title)
         self.root.resizable(False, False)
-        icon_image = ImageTk.PhotoImage(create_tray_image(True))
+        active_state = True
+        if hasattr(self.app, 'is_active'):
+            try:
+                active_state = bool(self.app.is_active())
+            except Exception:
+                active_state = True
+        icon_image = ImageTk.PhotoImage(
+            create_tray_image(active_state, show_status=False, with_background=True)
+        )
         self.root.tk.call('wm', 'iconphoto', str(self.root), str(icon_image))
         setattr(self.root, '_icon_image', icon_image)
 
@@ -73,18 +81,17 @@ class HotkeySettingsDialog:
         tk.Label(container, text='Atajo global', font=('TkDefaultFont', 11, 'bold')).pack(anchor='w')
         tk.Label(
             container,
-            text='Pulsa la combinacion directamente. Esc cierra la ventana.',
-            anchor='w',
-            justify='left',
-        ).pack(anchor='w', pady=(4, 10))
-
-        tk.Label(
-            container,
-            text='Recomendado: Ctrl+Alt+<letra>. Evita atajos reservados por Windows u otras apps.',
+            text='Pulsa la combinacion y luego Guardar.',
             anchor='w',
             justify='left',
             fg='#666666',
-        ).pack(anchor='w', pady=(0, 10))
+        ).pack(anchor='w', pady=(4, 12))
+
+        entry = tk.Entry(container, textvariable=self.capture_var, width=32, justify='center', state='readonly')
+        entry.pack(fill='x')
+        entry.focus_set()
+
+        tk.Label(container, textvariable=self.status_var, fg='#666666').pack(anchor='w', pady=(6, 12))
 
         tk.Checkbutton(
             container,
@@ -92,13 +99,7 @@ class HotkeySettingsDialog:
             variable=self.autostart_var,
             anchor='w',
             justify='left',
-        ).pack(anchor='w', pady=(0, 10))
-
-        entry = tk.Entry(container, textvariable=self.capture_var, width=34, justify='center', state='readonly')
-        entry.pack(fill='x')
-        entry.focus_set()
-
-        tk.Label(container, textvariable=self.status_var, fg='#666666').pack(anchor='w', pady=(6, 0))
+        ).pack(anchor='w')
 
         button_row = tk.Frame(container)
         button_row.pack(fill='x', pady=(16, 0))

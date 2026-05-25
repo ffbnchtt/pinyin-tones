@@ -40,7 +40,7 @@ def _draw_fallback_base(image: Image.Image) -> None:
     draw = ImageDraw.Draw(image)
     size = image.size[0]
     center = size // 2
-    radius = int(size * 0.42)
+    radius = int(size * 1)
     base_color = (18, 22, 32, 255)
     draw.ellipse(
         (center - radius, center - radius, center + radius, center + radius),
@@ -78,11 +78,19 @@ def _draw_status_badge(image: Image.Image, active: bool) -> None:
 # =========================================================
 
 
-def create_tray_image(active: bool = False, size: int = 64) -> Image.Image:
+def create_tray_image(
+    active: bool = False,
+    size: int = 64,
+    show_status: bool = True,
+    with_background: bool = False,
+) -> Image.Image:
     """Create transparent tray icon."""
-    image = _load_base_icon(size)
-    if image is None:
-        image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    base_icon = _load_base_icon(size)
+    image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    if with_background or base_icon is None:
         _draw_fallback_base(image)
-    _draw_status_badge(image, active)
+    if base_icon is not None:
+        image.alpha_composite(base_icon)
+    if show_status:
+        _draw_status_badge(image, active)
     return image

@@ -177,7 +177,7 @@ pyautogui.FAILSAFE = False
 
 
 # Estado global
-ACTIVE = False
+ACTIVE = True
 ACTIVE_LOCK = threading.Lock()
 PRESSED_KEYS = set()
 DEFAULT_HOTKEY = "<ctrl>+<alt>+<shift>+p"
@@ -365,6 +365,9 @@ class PinyinApp:
     def _is_active(self) -> bool:
         with ACTIVE_LOCK:
             return ACTIVE
+
+    def is_active(self) -> bool:
+        return self._is_active()
 
     def _tray_toggle_label(self, _item=None) -> str:
         return "Desactivar" if self._is_active() else "Activar"
