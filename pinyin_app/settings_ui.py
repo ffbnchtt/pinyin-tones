@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from typing import Any, Optional
 import logging
+import platform
 
 from pynput import keyboard
 from PIL import ImageTk
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 
 from pinyin_app.hotkeys import (
     format_hotkey,
@@ -63,6 +64,7 @@ class HotkeySettingsDialog:
         self.root.attributes('-topmost', True)
         self.root.title(self.dialog_title)
         self.root.resizable(False, False)
+        self.root.geometry('340x200')
         active_state = True
         if hasattr(self.app, 'is_active'):
             try:
@@ -75,38 +77,57 @@ class HotkeySettingsDialog:
         self.root.tk.call('wm', 'iconphoto', str(self.root), str(icon_image))
         setattr(self.root, '_icon_image', icon_image)
 
-        container = tk.Frame(self.root, padx=16, pady=16)
-        container.pack(fill='both', expand=True)
+        style = ttk.Style(self.root)
+        available_themes = set(style.theme_names())
+        if platform.system() == 'Windows' and 'vista' in available_themes:
+            style.theme_use('vista')
+        elif 'aqua' in available_themes:
+            style.theme_use('aqua')
+        elif 'clam' in available_themes:
+            style.theme_use('clam')
 
-        tk.Label(container, text='Atajo global', font=('TkDefaultFont', 11, 'bold')).pack(anchor='w')
-        tk.Label(
+        container = ttk.Frame(self.root, padding=(12, 12))
+        container.grid(row=0, column=0, sticky='nsew')
+        container.columnconfigure(0, weight=1)
+        container.rowconfigure(5, weight=1)
+        self.root.columnconfigure(0, weight=1)
+        self.root.rowconfigure(0, weight=1)
+
+        ttk.Label(container, text='Atajo global').grid(row=0, column=0, sticky='w')
+        entry = ttk.Entry(
             container,
-            text='Pulsa la combinacion y luego Guardar.',
-            anchor='w',
+            textvariable=self.capture_var,
+            width=30,
             justify='left',
-            fg='#666666',
-        ).pack(anchor='w', pady=(4, 12))
-
-        entry = tk.Entry(container, textvariable=self.capture_var, width=32, justify='center', state='readonly')
-        entry.pack(fill='x')
+            state='readonly',
+        )
+        entry.grid(row=1, column=0, sticky='ew', pady=(2, 6))
         entry.focus_set()
 
-        tk.Label(container, textvariable=self.status_var, fg='#666666').pack(anchor='w', pady=(6, 12))
+        ttk.Label(
+            container,
+            textvariable=self.status_var,
+        ).grid(row=2, column=0, sticky='w', pady=(0, 6))
 
-        tk.Checkbutton(
+        ttk.Checkbutton(
             container,
             text='Iniciar con el sistema operativo',
             variable=self.autostart_var,
-            anchor='w',
-            justify='left',
-        ).pack(anchor='w')
+        ).grid(row=3, column=0, sticky='w')
 
-        button_row = tk.Frame(container)
-        button_row.pack(fill='x', pady=(16, 0))
-        save_button = tk.Button(button_row, text='Guardar', command=self.save, width=10)
-        cancel_button = tk.Button(button_row, text='Cancelar', command=self.cancel, width=10)
-        cancel_button.pack(side='right')
-        save_button.pack(side='right', padx=(0, 8))
+        ttk.Separator(container, orient='horizontal').grid(
+            row=4,
+            column=0,
+            sticky='ew',
+            pady=(4, 2),
+        )
+
+        button_row = ttk.Frame(container)
+        button_row.grid(row=5, column=0, sticky='se', pady=(2, 0))
+        save_button = ttk.Button(button_row, text='Guardar', command=self.save)
+        cancel_button = ttk.Button(button_row, text='Cancelar', command=self.cancel)
+        save_button.grid(row=0, column=0)
+        cancel_button.grid(row=0, column=1, padx=(6, 0))
 
         self.capture_state['modifiers'], self.capture_state['trigger'] = parse_hotkey(self.app.hotkey)
         self.refresh_preview()

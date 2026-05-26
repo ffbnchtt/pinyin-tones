@@ -394,7 +394,14 @@ class PinyinApp:
         return self._is_active()
 
     def _tray_toggle_label(self, _item=None) -> str:
-        return "Desactivar" if self._is_active() else "Activar"
+        label = "Desactivar" if self._is_active() else "Activar"
+        shortcut = format_hotkey_display(self.hotkey_modifiers, self.hotkey_trigger)
+        if not shortcut:
+            return label
+        if platform.system() == "Windows":
+            # Tab separates the label from the right-aligned accelerator column on Windows menus.
+            return f"{label}\t{shortcut}"
+        return f"{label} ({shortcut})"
 
     def open_settings(self, *_):
         """Request opening the settings dialog from the tray."""
@@ -461,6 +468,7 @@ class PinyinApp:
         menu = pystray.Menu(
             pystray.MenuItem(self._tray_toggle_label, lambda: self.toggle_active()),
             pystray.MenuItem("Configuración", lambda: self.open_settings()),
+            pystray.Menu.SEPARATOR,
             pystray.MenuItem("Salir", lambda: quit_app(self)),
         )
         self.icon = pystray.Icon("pinyin", image, "Pinyin Tones", menu)
