@@ -46,6 +46,37 @@ def get_launch_command_string(config: AutostartConfig) -> str:
     return subprocess.list2cmdline(get_launch_command_args(config))
 
 
+def get_autostart_target_path(config: AutostartConfig) -> str:
+    """Return the path to verify when starting from autostart."""
+    if getattr(sys, 'frozen', False):
+        return os.path.abspath(sys.executable)
+    return os.path.abspath(os.path.join(config.root_dir, config.script_rel_path))
+
+
+def get_autostart_test_flag() -> str:
+    """Return the test flag used by sh to validate the launch target."""
+    return '-x' if getattr(sys, 'frozen', False) else '-f'
+
+
+def get_windows_autostart_target(config: AutostartConfig) -> str:
+    """Return the path that should exist for Windows autostart validation."""
+    return get_autostart_target_path(config)
+
+
+def get_windows_autostart_command(config: AutostartConfig) -> str:
+    """Return a Windows Run command that self-cleans when the target is missing."""
+    launch_cmd = get_launch_command_string(config)
+    target_path = get_windows_autostart_target(config)
+    reg_key = f'HKCU\\{config.windows_run_key_path}'
+    reg_value = config.windows_run_value_name
+    return (
+        'cmd /c '
+        f'if exist "{target_path}" '
+        f'start "" {launch_cmd} '
+        f'else reg delete "{reg_key}" /v "{reg_value}" /f'
+    )
+
+
 def get_macos_launch_agent_path(label: str) -> str:
     """Return the LaunchAgent plist path for macOS."""
     return os.path.expanduser(f'~/Library/LaunchAgents/{label}.plist')
@@ -58,9 +89,18 @@ def get_linux_autostart_path(filename: str) -> str:
 
 def build_macos_launch_agent_plist(config: AutostartConfig) -> dict:
     """Build the macOS LaunchAgent plist contents."""
+    cleanup_path = get_macos_launch_agent_path(config.mac_label)
+    target_path = shlex.quote(get_autostart_target_path(config))
+    test_flag = get_autostart_test_flag()
+    launch_cmd = shlex.join(get_launch_command_args(config))
+    cleanup_cmd = shlex.quote(cleanup_path)
+    guard_cmd = (
+        f'if [ {test_flag} {target_path} ]; then {launch_cmd}; '
+        f'else rm -f {cleanup_cmd}; fi'
+    )
     return {
         'Label': config.mac_label,
-        'ProgramArguments': get_launch_command_args(config),
+        'ProgramArguments': ['/bin/sh', '-c', guard_cmd],
         'RunAtLoad': True,
         'KeepAlive': False,
         'WorkingDirectory': config.root_dir,
@@ -71,7 +111,16 @@ def build_macos_launch_agent_plist(config: AutostartConfig) -> dict:
 
 def build_linux_desktop_entry(config: AutostartConfig) -> str:
     """Build the Linux autostart desktop entry text."""
-    exec_line = shlex.join(get_launch_command_args(config))
+    cleanup_path = get_linux_autostart_path(config.linux_autostart_filename)
+    target_path = shlex.quote(get_autostart_target_path(config))
+    test_flag = get_autostart_test_flag()
+    launch_cmd = shlex.join(get_launch_command_args(config))
+    cleanup_cmd = shlex.quote(cleanup_path)
+    guard_cmd = (
+        f'if [ {test_flag} {target_path} ]; then {launch_cmd}; '
+        f'else rm -f {cleanup_cmd}; fi'
+    )
+    exec_line = shlex.join(['/bin/sh', '-c', guard_cmd])
     return (
         '[Desktop Entry]\n'
         f'Name={config.app_name}\n'
@@ -87,7 +136,7 @@ def set_windows_autostart(enabled: bool, config: AutostartConfig) -> None:
     """Create or remove the Windows Run registry entry."""
     if winreg is None:
         raise RuntimeError('Windows registry access is not available')
-    command = get_launch_command_string(config)
+    command = get_windows_autostart_command(config)
     with winreg.CreateKey(winreg.HKEY_CURRENT_USER, config.windows_run_key_path) as key:
         if enabled:
             winreg.SetValueEx(key, config.windows_run_value_name, 0, winreg.REG_SZ, command)

@@ -40,8 +40,8 @@ def _draw_fallback_base(image: Image.Image) -> None:
     draw = ImageDraw.Draw(image)
     size = image.size[0]
     center = size // 2
-    radius = int(size * 1)
-    base_color = (18, 22, 32, 255)
+    radius = int(size * 0.5)
+    base_color = (0, 0, 0, 255)
     draw.ellipse(
         (center - radius, center - radius, center + radius, center + radius),
         fill=base_color,

@@ -301,14 +301,17 @@ class TestAutostartHelpers(unittest.TestCase):
         with mock.patch.object(pinyin_live, 'get_launch_command_args', return_value=['/opt/pinyin/pinyin_app', '--flag']):
             desktop_entry = pinyin_live.build_linux_desktop_entry()
         self.assertIn('Name=Pinyin Tones', desktop_entry)
-        self.assertIn("Exec=/opt/pinyin/pinyin_app --flag", desktop_entry)
+        self.assertIn('Exec=/bin/sh -c', desktop_entry)
+        self.assertIn('/opt/pinyin/pinyin_app --flag', desktop_entry)
         self.assertIn('X-GNOME-Autostart-enabled=true', desktop_entry)
 
     def test_build_macos_launch_agent_plist_contains_program_arguments(self):
         with mock.patch.object(pinyin_live, 'get_launch_command_args', return_value=['/Applications/Pinyin.app/Contents/MacOS/pinyin_app']):
             plist_data = pinyin_live.build_macos_launch_agent_plist()
         self.assertEqual(plist_data['Label'], 'com.federico.pinyin-tones')
-        self.assertEqual(plist_data['ProgramArguments'], ['/Applications/Pinyin.app/Contents/MacOS/pinyin_app'])
+        self.assertEqual(plist_data['ProgramArguments'][0], '/bin/sh')
+        self.assertEqual(plist_data['ProgramArguments'][1], '-c')
+        self.assertIn('/Applications/Pinyin.app/Contents/MacOS/pinyin_app', plist_data['ProgramArguments'][2])
         self.assertTrue(plist_data['RunAtLoad'])
 
     def test_sync_autostart_setting_dispatches_by_platform(self):

@@ -78,11 +78,32 @@ try:
     def get_linux_autostart_path(filename: str):
         return _autostart.get_linux_autostart_path(filename)
 
+    def _get_autostart_target_path() -> str:
+        if getattr(sys, "frozen", False):
+            return os.path.abspath(sys.executable)
+        return os.path.abspath(os.path.join(ROOT_DIR, "pinyin_live.py"))
+
+    def _get_autostart_test_flag() -> str:
+        return "-x" if getattr(sys, "frozen", False) else "-f"
+
+    def _build_unix_autostart_guard(cleanup_path: str) -> str:
+        launch_cmd = shlex.join(get_launch_command_args())
+        target_path = shlex.quote(_get_autostart_target_path())
+        cleanup_cmd = shlex.quote(cleanup_path)
+        test_flag = _get_autostart_test_flag()
+        return (
+            f"if [ {test_flag} {target_path} ]; then {launch_cmd}; "
+            f"else rm -f {cleanup_cmd}; fi"
+        )
+
     def build_macos_launch_agent_plist():
         # build plist using the local get_launch_command_args so tests can patch it
+        guard_cmd = _build_unix_autostart_guard(
+            get_macos_launch_agent_path(MAC_LAUNCH_AGENT_LABEL)
+        )
         return {
             "Label": MAC_LAUNCH_AGENT_LABEL,
-            "ProgramArguments": get_launch_command_args(),
+            "ProgramArguments": ["/bin/sh", "-c", guard_cmd],
             "RunAtLoad": True,
             "KeepAlive": False,
             "WorkingDirectory": ROOT_DIR,
@@ -92,7 +113,10 @@ try:
 
     def build_linux_desktop_entry():
         # build desktop entry using the local get_launch_command_args so tests can patch it
-        exec_line = shlex.join(get_launch_command_args())
+        guard_cmd = _build_unix_autostart_guard(
+            get_linux_autostart_path(LINUX_AUTOSTART_FILENAME)
+        )
+        exec_line = shlex.join(["/bin/sh", "-c", guard_cmd])
         return (
             "[Desktop Entry]\n"
             f"Name={APP_NAME}\n"
@@ -477,7 +501,7 @@ def run_hotkey_settings_dialog_for_app(app: PinyinApp) -> None:
 def main():
     """Entry point for the desktop app."""
     print("App de Pinyin en vivo")
-    print("Usa el icono en la bandeja para ver el estado y modificar atajo")
+    print("Usá el ícono en la bandeja para ver el estado y modificar atajo")
     app = PinyinApp()
     logger.info(
         f"App starting with hotkey={app.hotkey!r}, modifiers={sorted(app.hotkey_modifiers)}, trigger={app.hotkey_trigger!r}"

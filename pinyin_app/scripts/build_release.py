@@ -28,6 +28,7 @@ BUILD_DIR = APP_DIR / 'build'
 RELEASE_DIR = DIST_DIR / 'pinyin_app_release'
 ASSET_DIR = BUILD_DIR / 'branding'
 TRAY_ASSET_DIR = APP_DIR / 'assets' / 'tray'
+APP_ICON_SOURCE = APP_DIR / 'assets' / 'app_icon.png'
 APP_NAME = 'pinyin_app'
 APP_TITLE = 'Pinyin Tones'
 APP_ID = 'pinyin-tones'
@@ -58,6 +59,11 @@ def ensure_user_guide() -> Path:
 
 
 def build_icon_image(size: int = 1024) -> Image.Image:
+    if APP_ICON_SOURCE.exists():
+        image = Image.open(APP_ICON_SOURCE).convert('RGBA')
+        if image.size != (size, size):
+            image = image.resize((size, size), Image.LANCZOS)
+        return image
     image = Image.new('RGBA', (size, size), (0, 0, 0, 0))
     draw = ImageDraw.Draw(image)
     center = size // 2
@@ -65,15 +71,37 @@ def build_icon_image(size: int = 1024) -> Image.Image:
     base_color = (18, 22, 32, 255)
     accent = (0, 183, 102, 255)
     accent_soft = (255, 205, 63, 255)
-    draw.ellipse((center - radius, center - radius, center + radius, center + radius), fill=base_color, outline=accent, width=max(8, size // 64))
+    draw.ellipse(
+        (center - radius, center - radius, center + radius, center + radius),
+        fill=base_color,
+        outline=accent,
+        width=max(8, size // 64),
+    )
     try:
         font = ImageFont.load_default()
-        draw.text((int(size * 0.42), int(size * 0.34)), 'P', font=font, fill=(255, 255, 255, 255))
+        draw.text(
+            (int(size * 0.42), int(size * 0.34)),
+            'P',
+            font=font,
+            fill=(255, 255, 255, 255),
+        )
     except Exception:
         pass
-    draw.line((int(size * 0.33), int(size * 0.66), int(size * 0.67), int(size * 0.66)), fill=accent_soft, width=max(10, size // 72))
-    draw.line((int(size * 0.38), int(size * 0.58), int(size * 0.50), int(size * 0.50)), fill=accent_soft, width=max(8, size // 80))
-    draw.line((int(size * 0.50), int(size * 0.50), int(size * 0.62), int(size * 0.44)), fill=accent_soft, width=max(8, size // 80))
+    draw.line(
+        (int(size * 0.33), int(size * 0.66), int(size * 0.67), int(size * 0.66)),
+        fill=accent_soft,
+        width=max(10, size // 72),
+    )
+    draw.line(
+        (int(size * 0.38), int(size * 0.58), int(size * 0.50), int(size * 0.50)),
+        fill=accent_soft,
+        width=max(8, size // 80),
+    )
+    draw.line(
+        (int(size * 0.50), int(size * 0.50), int(size * 0.62), int(size * 0.44)),
+        fill=accent_soft,
+        width=max(8, size // 80),
+    )
     return image
 
 
