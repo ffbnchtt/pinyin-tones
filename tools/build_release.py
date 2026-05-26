@@ -20,25 +20,19 @@ from typing import Iterable
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
-APP_DIR = ROOT_DIR
-SRC_DIR = APP_DIR
+SRC_DIR = ROOT_DIR / 'src'
+APP_DIR = SRC_DIR / 'pinyin_app'
 SRC_PATH = APP_DIR / 'pinyin_live.py'
-DIST_DIR = APP_DIR / 'dist'
-BUILD_DIR = APP_DIR / 'build'
+DIST_DIR = ROOT_DIR / 'dist'
+BUILD_DIR = ROOT_DIR / 'build'
 RELEASE_DIR = DIST_DIR / 'pinyin_app_release'
 ASSET_DIR = BUILD_DIR / 'branding'
 TRAY_ASSET_DIR = APP_DIR / 'assets' / 'tray'
 APP_ICON_SOURCE = APP_DIR / 'assets' / 'app_icon.png'
 APP_NAME = 'pinyin_app'
-APP_TITLE = 'Pinyin Tones'
-APP_ID = 'pinyin-tones'
-WINDOWS_RUN_KEY_PATH = r'Software\Microsoft\Windows\CurrentVersion\Run'
-WINDOWS_RUN_VALUE_NAME = 'Pinyin Tones'
-MAC_LAUNCH_AGENT_LABEL = 'com.federico.pinyin-tones'
-LINUX_AUTOSTART_FILENAME = 'pinyin-tones.desktop'
 ICON_BASENAME = 'pinyin_app'
-LICENSE_SOURCE = ROOT_DIR.parent / 'LICENSE'
-USER_GUIDE_SOURCE = APP_DIR / 'docs' / 'USER_GUIDE.md'
+LICENSE_SOURCE = ROOT_DIR / 'LICENSE'
+USER_GUIDE_SOURCE = ROOT_DIR / 'docs' / 'USER_GUIDE.md'
 
 
 def parse_args() -> argparse.Namespace:
@@ -128,12 +122,6 @@ def ensure_icon_assets() -> dict[str, Path]:
     }
 
 
-def get_launcher_command() -> list[str]:
-    if getattr(sys, 'frozen', False):
-        return [os.path.abspath(sys.executable)]
-    return [os.path.abspath(sys.executable), str(SRC_PATH)]
-
-
 def build_pyinstaller_command(platform_name: str, icon_assets: dict[str, Path]) -> list[str]:
     command = [
         sys.executable,
@@ -205,7 +193,7 @@ def copy_release_payload(platform_name: str, artifact_path: Path, icon_assets: d
 
 
 def run_pyinstaller(command: list[str]) -> None:
-    subprocess.run(command, cwd=str(APP_DIR), check=True)
+    subprocess.run(command, cwd=str(ROOT_DIR), check=True)
 
 
 def build(platform_name: str) -> Path:

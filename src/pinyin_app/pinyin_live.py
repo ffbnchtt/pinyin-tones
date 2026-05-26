@@ -18,13 +18,12 @@ import pystray
 import platform
 import shlex
 
-# When running `python pinyin_live.py` from inside the `pinyin_app` folder,
-# the package imports like `pinyin_app.*` fail because the parent directory
-# is not on sys.path. Ensure the parent directory is added so imports resolve.
+# When running `python src/pinyin_app/pinyin_live.py`, ensure the src directory
+# is on sys.path so package imports resolve correctly.
+SRC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
 if __package__ is None:
-    parent_dir = os.path.dirname(os.path.dirname(__file__))
-    if parent_dir not in sys.path:
-        sys.path.insert(0, parent_dir)
+    if SRC_DIR not in sys.path:
+        sys.path.insert(0, SRC_DIR)
 
 try:
     import pyperclip
@@ -62,8 +61,6 @@ try:
     BUFFER_LOCK = _buffer.BUFFER_LOCK
     pyperclip = _clipboard.pyperclip
     pyautogui = getattr(_buffer, "pyautogui", getattr(_clipboard, "pyautogui", None))
-    CLIPBOARD_BASELINE = getattr(_clipboard, "CLIPBOARD_BASELINE", None)
-    CLIPBOARD_RESTORE_TIMER = getattr(_clipboard, "CLIPBOARD_RESTORE_TIMER", None)
 
     # Re-export autostart helpers for compatibility (wrap to inject config)
     def get_launch_command_args():
@@ -81,7 +78,7 @@ try:
     def _get_autostart_target_path() -> str:
         if getattr(sys, "frozen", False):
             return os.path.abspath(sys.executable)
-        return os.path.abspath(os.path.join(ROOT_DIR, "pinyin_live.py"))
+        return os.path.abspath(os.path.join(ROOT_DIR, SCRIPT_REL_PATH))
 
     def _get_autostart_test_flag() -> str:
         return "-x" if getattr(sys, "frozen", False) else "-f"
@@ -183,7 +180,7 @@ except ImportError:  # pragma: no cover - script execution fallback
 
 
 # Paths
-ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
+ROOT_DIR = os.path.abspath(os.path.join(SRC_DIR, os.pardir))
 CONFIG_PATH = os.path.join(ROOT_DIR, "config.json")
 LOG_PATH = os.path.join(ROOT_DIR, "pinyin_app.log")
 
@@ -210,19 +207,13 @@ SETTINGS_REQUESTED = threading.Event()
 STARTUP_ENABLED_DEFAULT = False
 DEFAULT_CONFIG = {"hotkey": DEFAULT_HOTKEY, "autostart": STARTUP_ENABLED_DEFAULT}
 STOP_REQUESTED = threading.Event()
-CLIPBOARD_RESTORE_DELAY = 0.15
-CLIPBOARD_SYNC_TIMEOUT = 0.01
-CLIPBOARD_SYNC_POLL = 0.001
-CLIPBOARD_BASELINE = None
-CLIPBOARD_RESTORE_TIMER = None
-CLIPBOARD_RESTORE_LOCK = threading.Lock()
 DIALOG_TITLE = "Configuración"
 APP_NAME = "Pinyin Tones"
-APP_ID = "pinyin-tones"
 WINDOWS_RUN_KEY_PATH = r"Software\Microsoft\Windows\CurrentVersion\Run"
 WINDOWS_RUN_VALUE_NAME = "Pinyin Tones"
 MAC_LAUNCH_AGENT_LABEL = "com.federico.pinyin-tones"
 LINUX_AUTOSTART_FILENAME = "pinyin-tones.desktop"
+SCRIPT_REL_PATH = os.path.join("src", "pinyin_app", "pinyin_live.py")
 
 
 def build_autostart_config() -> AutostartConfig:
@@ -235,6 +226,7 @@ def build_autostart_config() -> AutostartConfig:
         windows_run_value_name=WINDOWS_RUN_VALUE_NAME,
         mac_label=MAC_LAUNCH_AGENT_LABEL,
         linux_autostart_filename=LINUX_AUTOSTART_FILENAME,
+        script_rel_path=SCRIPT_REL_PATH,
     )
 
 

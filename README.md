@@ -4,7 +4,7 @@ Convierte tonos de Pinyin en tiempo real mientras escribís. Corre en segundo pl
 
 ## Para usuarios
 
-1. Andá a los Releases: <https://github.com/ffbnchtt/pinyin-tones/releases>
+1. Buscá la última versión en [releases](https://github.com/ffbnchtt/pinyin-tones/releases).
 2. Descarga el archivo para tu sistema operativo.
 3. Descomprimí y ejecutá la aplicación.
 4. Vas a ver el ícono en la bandeja del sistema.
@@ -22,7 +22,7 @@ Convierte tonos de Pinyin en tiempo real mientras escribís. Corre en segundo pl
 
 ## Guías
 
-- Guía de usuario: [pinyin_app/docs/USER_GUIDE.md](pinyin_app/docs/USER_GUIDE.md)
+- Guía de usuario: [docs/USER_GUIDE.md](docs/USER_GUIDE.md)
 - Descargas y compilación: [docs/DOWNLOAD.md](docs/DOWNLOAD.md)
 
 ## Para desarrolladores
@@ -32,5 +32,9 @@ Consultá la arquitectura en [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) y los 
 Pruebas:
 
 ```bash
-python -m unittest discover tests
+python tools/run_tests.py
 ```
+
+---
+
+Hecho con ❤️ por @ffbnchtt. Contribuciones bienvenidas.

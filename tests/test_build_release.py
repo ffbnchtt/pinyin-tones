@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from pinyin_app.scripts import build_release
+from tools import build_release
 
 
 class TestBuildReleaseHelpers(unittest.TestCase):

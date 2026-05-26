@@ -9,9 +9,12 @@ Si solo querés usar la aplicación, el proyecto está pensado para empaquetarse
 Instalá dependencias y ejecutá en desarrollo:
 
 ```powershell
-cd pinyin_app
 pip install -r requirements.txt
-python pinyin_live.py
+python src/pinyin_app/pinyin_live.py
+
+# Alternativa si querés ejecutar como módulo instalado
+pip install -e .
+python -m pinyin_app
 ```
 
 Construcción recomendada (usá el helper de release):
@@ -19,19 +22,19 @@ Construcción recomendada (usá el helper de release):
 Windows:
 
 ```powershell
-python pinyin_app\scripts\build_release.py --platform windows
+python tools\build_release.py --platform windows
 ```
 
 macOS:
 
 ```bash
-python3 pinyin_app/scripts/build_release.py --platform macos
+python3 tools/build_release.py --platform macos
 ```
 
 Linux:
 
 ```bash
-python3 pinyin_app/scripts/build_release.py --platform linux
+python3 tools/build_release.py --platform linux
 ```
 
 Ejemplos directos con PyInstaller (solo si necesitas personalizar):
@@ -39,24 +42,24 @@ Ejemplos directos con PyInstaller (solo si necesitas personalizar):
 Windows:
 
 ```cmd
-pyinstaller --onefile --noconsole --name pinyin_app --paths pinyin_app --hidden-import pinyin_app.pinyin_converter pinyin_app/pinyin_live.py
+pyinstaller --onefile --noconsole --name pinyin_app --paths src --hidden-import pinyin_app.pinyin_converter src/pinyin_app/pinyin_live.py
 ```
 
 macOS:
 
 ```bash
-pyinstaller --onefile --windowed --name pinyin_app --paths pinyin_app --hidden-import pinyin_app.pinyin_converter pinyin_app/pinyin_live.py
+pyinstaller --onefile --windowed --name pinyin_app --paths src --hidden-import pinyin_app.pinyin_converter src/pinyin_app/pinyin_live.py
 ```
 
 Linux:
 
 ```bash
-pyinstaller --onefile --noconsole --name pinyin_app --paths pinyin_app --hidden-import pinyin_app.pinyin_converter pinyin_app/pinyin_live.py
+pyinstaller --onefile --noconsole --name pinyin_app --paths src --hidden-import pinyin_app.pinyin_converter src/pinyin_app/pinyin_live.py
 ```
 
 ## Íconos del tray
 
-- Los PNG del tray se cargan desde `pinyin_app/assets/tray`.
+- Los PNG del tray se cargan desde `src/pinyin_app/assets/tray`.
 - Mantené variantes en 16/20/24/32/64 px con el prefijo `tray_quicksand_o_caron_`.
 - El helper `build_release.py` empaqueta esos assets automáticamente cuando existen.
 

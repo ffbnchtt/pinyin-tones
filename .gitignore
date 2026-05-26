@@ -7,5 +7,5 @@ __pycache__/
 build/
 dist/
 *.spec
-pinyin_app/config.json
-pinyin_app/pinyin_app.log
+src/pinyin_app/config.json
+pinyin_app.log
