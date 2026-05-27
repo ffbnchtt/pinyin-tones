@@ -326,6 +326,17 @@ class TestAutostartHelpers(unittest.TestCase):
         fake_windows.assert_not_called()
         fake_macos.assert_not_called()
 
+    def test_windows_autostart_command_is_compact_and_self_cleaning(self):
+        config = pinyin_live.build_autostart_config()
+        cmd = pinyin_live._autostart.get_windows_autostart_command(config)
+
+        self.assertTrue(cmd.startswith('cmd /c for %i in ("'))
+        self.assertIn('@if exist %~fi (start "" %~fi)', cmd)
+        self.assertIn('reg delete HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run', cmd)
+        self.assertIn('/v "Pinyin Tones" /f', cmd)
+        # Windows Run entries have a practical command length limit near MAX_PATH.
+        self.assertLessEqual(len(cmd), 260)
+
 
 if __name__ == '__main__':
     unittest.main()

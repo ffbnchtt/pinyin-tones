@@ -65,15 +65,16 @@ def get_windows_autostart_target(config: AutostartConfig) -> str:
 
 def get_windows_autostart_command(config: AutostartConfig) -> str:
     """Return a Windows Run command that self-cleans when the target is missing."""
-    launch_cmd = get_launch_command_string(config)
     target_path = get_windows_autostart_target(config)
-    reg_key = f'HKCU\\{config.windows_run_key_path}'
     reg_value = config.windows_run_value_name
+    # Keep the command compact to stay within the practical Run value length limit.
+    # The target path appears once and %~fi resolves to the normalized full path.
     return (
         'cmd /c '
-        f'if exist "{target_path}" '
-        f'start "" {launch_cmd} '
-        f'else reg delete "{reg_key}" /v "{reg_value}" /f'
+        f'for %i in ("{target_path}") do '
+        f'@if exist %~fi (start "" %~fi) '
+        'else reg delete HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run '
+        f'/v "{reg_value}" /f'
     )
 
 
