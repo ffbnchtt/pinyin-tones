@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import platform
 import threading
 import time
 import logging
@@ -113,11 +114,12 @@ def paste_text(text: str) -> None:
 
 
 def paste_via_clipboard() -> None:
-    pyautogui.keyDown("ctrl")
+    modifier = "command" if platform.system() == "Darwin" else "ctrl"
+    pyautogui.keyDown(modifier)
     time.sleep(KEY_COMBO_DELAY)
 
     try:
         pyautogui.press("v")
         time.sleep(KEY_COMBO_DELAY)
     finally:
-        pyautogui.keyUp("ctrl")
+        pyautogui.keyUp(modifier)

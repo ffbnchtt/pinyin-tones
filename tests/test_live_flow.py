@@ -33,15 +33,25 @@ class TestLiveReplacementFlow(unittest.TestCase):
         def fake_press(key, presses=1, interval=0.0):
             self.calls.append(('press', key, presses, interval))
 
+        def fake_key_down(key):
+            self.calls.append(('keyDown', key))
+
+        def fake_key_up(key):
+            self.calls.append(('keyUp', key))
+
         self.paste_patch = mock.patch.object(clipboard_mod.pyperclip, 'paste', side_effect=fake_paste)
         self.copy_patch = mock.patch.object(clipboard_mod.pyperclip, 'copy', side_effect=fake_copy)
         self.hotkey_patch = mock.patch.object(clipboard_mod.pyautogui, 'hotkey', side_effect=fake_hotkey)
         self.press_patch = mock.patch.object(buffer_mod.pyautogui, 'press', side_effect=fake_press)
+        self.key_down_patch = mock.patch.object(clipboard_mod.pyautogui, 'keyDown', side_effect=fake_key_down)
+        self.key_up_patch = mock.patch.object(clipboard_mod.pyautogui, 'keyUp', side_effect=fake_key_up)
 
         self.paste_patch.start()
         self.copy_patch.start()
         self.hotkey_patch.start()
         self.press_patch.start()
+        self.key_down_patch.start()
+        self.key_up_patch.start()
 
     def tearDown(self):
         mock.patch.stopall()
@@ -52,7 +62,9 @@ class TestLiveReplacementFlow(unittest.TestCase):
         self.assertEqual(buffer_mod.BUFFER, [])
         self.assertEqual(self.calls[0], ('press', 'backspace', 4, 0))
         self.assertIn(('copy', 'hǎo'), self.calls)
-        self.assertIn(('hotkey', ('ctrl', 'v')), self.calls)
+        self.assertIn(('keyDown', 'ctrl'), self.calls)
+        self.assertIn(('press', 'v', 1, 0.0), self.calls)
+        self.assertIn(('keyUp', 'ctrl'), self.calls)
 
     def test_delete_last_token_uses_word_delete(self):
         pinyin_live.delete_last_token()
@@ -62,7 +74,7 @@ class TestLiveReplacementFlow(unittest.TestCase):
         buffer_mod.BUFFER[:] = list('hola')
         pinyin_live.process_buffer()
         self.assertEqual(buffer_mod.BUFFER, list('hola'))
-        self.assertNotIn(('hotkey', ('ctrl', 'v')), self.calls)
+        self.assertNotIn(('keyDown', 'ctrl'), self.calls)
 
     def test_paste_text_waits_for_clipboard_sync(self):
         clipboard_reads = iter(['original', 'original', 'hǎo'])
@@ -77,12 +89,16 @@ class TestLiveReplacementFlow(unittest.TestCase):
 
         with mock.patch.object(clipboard_mod.pyperclip, 'paste', side_effect=fake_paste), \
              mock.patch.object(clipboard_mod.pyperclip, 'copy') as fake_copy, \
-             mock.patch.object(clipboard_mod.pyautogui, 'hotkey') as fake_hotkey, \
+             mock.patch.object(clipboard_mod.pyautogui, 'keyDown') as fake_key_down, \
+             mock.patch.object(clipboard_mod.pyautogui, 'press') as fake_press, \
+             mock.patch.object(clipboard_mod.pyautogui, 'keyUp') as fake_key_up, \
              mock.patch.object(clipboard_mod.time, 'sleep', side_effect=fake_sleep):
             pinyin_live.paste_text('hǎo')
 
         fake_copy.assert_called_with('hǎo')
-        fake_hotkey.assert_called_once_with('ctrl', 'v')
+        fake_key_down.assert_called_once_with('ctrl')
+        fake_press.assert_called_with('v')
+        fake_key_up.assert_called_once_with('ctrl')
         self.assertGreaterEqual(len(paste_calls), 2)
 
     def test_clipboard_restore_uses_initial_baseline(self):
@@ -124,6 +140,15 @@ class TestLiveReplacementFlow(unittest.TestCase):
         pinyin_live.on_type(SimpleNamespace(char='x'))
         self.assertEqual(buffer_mod.BUFFER, list('hao3'))
 
+    def test_on_type_accepts_umlaut_vowel_for_live_buffer(self):
+        pinyin_live.ACTIVE = True
+        buffer_mod.BUFFER.clear()
+
+        pinyin_live.on_type(SimpleNamespace(char='l'))
+        pinyin_live.on_type(SimpleNamespace(char='ü'))
+
+        self.assertEqual(buffer_mod.BUFFER, ['l', 'ü'])
+
     def test_process_buffer_sets_suppression_window(self):
         buffer_mod.BUFFER[:] = list('hao3')
         with mock.patch.object(buffer_mod.time, 'monotonic', return_value=1000.0):
@@ -160,10 +185,18 @@ class TestLiveReplacementFlow(unittest.TestCase):
         pinyin_live.process_buffer()
         outputs.extend(self.calls)
 
-        hotkeys = [call for call in outputs if call[0] == 'hotkey']
+        paste_sequences = [call for call in outputs if call == ('press', 'v', 1, 0.0)]
         self.assertIn(('copy', 'zhōng'), outputs)
         self.assertIn(('copy', 'guó'), outputs)
-        self.assertGreaterEqual(len(hotkeys), 2)
+        self.assertGreaterEqual(len(paste_sequences), 2)
+
+    def test_paste_text_uses_command_on_macos(self):
+        with mock.patch.object(clipboard_mod.platform, 'system', return_value='Darwin'), \
+             mock.patch.object(clipboard_mod.time, 'sleep', return_value=None):
+            pinyin_live.paste_text('hǎo')
+
+        self.assertIn(('keyDown', 'command'), self.calls)
+        self.assertIn(('keyUp', 'command'), self.calls)
 
 
 class TestHotkeyCaptureFormatting(unittest.TestCase):

@@ -295,7 +295,7 @@ def on_type(key):
     with ACTIVE_LOCK:
         if not ACTIVE:
             return
-    if char.isalpha() and (char.isascii() or char in "vV"):
+    if char.isalpha() and (char.isascii() or char in "vVüÜ"):
         _buffer.handle_alpha_char(char)
     elif char.isdigit() and char in "12345":
         _buffer.handle_digit_char(char)

@@ -15,7 +15,7 @@ Si preferís ejecutar desde la fuente (desarrollo):
 
 ### Prerrequisitos
 
-- Python 3.8+ (recomendado)
+- Python 3.10+ (recomendado)
 - `pip` y (opcional) un entorno virtual
 
 ### Instalación desde fuente
@@ -26,13 +26,19 @@ python -m venv .venv
 source .venv/bin/activate
 # Windows (PowerShell)
 .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+pip install -e .
 ```
 
 ### Ejecutar la aplicación (modo desarrollo)
 
 ```bash
-python -m src.pinyin_app
+python -m pinyin_app
+```
+
+Si también querés compilar ejecutables desde la fuente:
+
+```bash
+pip install -e ".[dev]"
 ```
 
 ## Uso básico
@@ -42,7 +48,7 @@ python -m src.pinyin_app
 
 ## Configuración
 
-La configuración se guarda en [src/pinyin_app/config.json](src/pinyin_app/config.json). Desde la interfaz de configuración podés:
+La configuración se guarda en [`config.json`](config.json), junto al ejecutable o en la raíz del proyecto cuando corrés desde fuente. Desde la interfaz de configuración podés:
 
 - Cambiar el atajo global.
 - Activar/desactivar el inicio automático con el sistema.
