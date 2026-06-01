@@ -16,7 +16,7 @@ try:
 except Exception:  # pragma: no cover - optional dep
     pyautogui = None
 
-logger = logging.getLogger('pinyin_app')
+logger = logging.getLogger("pinyin_app")
 
 CLIPBOARD_RESTORE_DELAY = 0.15
 CLIPBOARD_SYNC_TIMEOUT = 0.01
@@ -24,6 +24,11 @@ CLIPBOARD_SYNC_POLL = 0.001
 CLIPBOARD_BASELINE = None
 CLIPBOARD_RESTORE_TIMER = None
 CLIPBOARD_RESTORE_LOCK = threading.Lock()
+
+# Small delay required between Ctrl down, V press and Ctrl up.
+# Without it some applications receive a literal "v" instead of
+# interpreting the sequence as Ctrl+V.
+KEY_COMBO_DELAY = 0.05
 
 
 def sync_clipboard_text(expected_text: str) -> None:
@@ -57,7 +62,7 @@ def restore_clipboard_baseline() -> None:
     try:
         pyperclip.copy(baseline)
     except Exception:
-        logger.exception('Failed to restore clipboard baseline')
+        logger.exception("Failed to restore clipboard baseline")
 
 
 def schedule_clipboard_restore() -> None:
@@ -88,7 +93,7 @@ def paste_text(text: str) -> None:
     """
     global CLIPBOARD_BASELINE
     if pyperclip is None or pyautogui is None:
-        logger.info('pyperclip/pyautogui not available; falling back to typing')
+        logger.info("pyperclip/pyautogui not available; falling back to typing")
         if pyautogui is not None:
             pyautogui.write(text, interval=0.01)
         return
@@ -98,10 +103,21 @@ def paste_text(text: str) -> None:
         previous_clipboard = None
     if CLIPBOARD_BASELINE is None and previous_clipboard is not None:
         CLIPBOARD_BASELINE = previous_clipboard
-        
+
     try:
         pyperclip.copy(text)
         sync_clipboard_text(text)
-        pyautogui.hotkey('ctrl', 'v')
+        paste_via_clipboard()
     finally:
         schedule_clipboard_restore()
+
+
+def paste_via_clipboard() -> None:
+    pyautogui.keyDown("ctrl")
+    time.sleep(KEY_COMBO_DELAY)
+
+    try:
+        pyautogui.press("v")
+        time.sleep(KEY_COMBO_DELAY)
+    finally:
+        pyautogui.keyUp("ctrl")
