@@ -285,6 +285,7 @@ def on_type(key):
         return
     try:
         char = key.char
+        logger.info("on_type char=%r suppressed=%s", char, is_input_suppressed())
     except AttributeError:
         _buffer.reset_buffer()
         return

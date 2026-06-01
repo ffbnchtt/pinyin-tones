@@ -14,7 +14,7 @@ except Exception:  # pragma: no cover - optional dep
 from pinyin_app.pinyin_converter import convert_pinyin_token
 from pinyin_app.clipboard import paste_text
 
-logger = logging.getLogger('pinyin_app')
+logger = logging.getLogger("pinyin_app")
 
 BUFFER: list[str] = []
 BUFFER_LOCK = threading.Lock()
@@ -42,6 +42,7 @@ def is_input_suppressed() -> bool:
 
 def reset_buffer() -> None:
     """Clear the typing buffer."""
+    logger.info("BUFFER RESET FROM %r", BUFFER.copy())
     with BUFFER_LOCK:
         BUFFER.clear()
 
@@ -50,8 +51,9 @@ def delete_last_token() -> None:
     """Delete the characters in the current buffer from the focused app."""
     with BUFFER_LOCK:
         presses = max(1, len(BUFFER))
+    logger.info("Deleting token: buffer=%r presses=%d", "".join(BUFFER), presses)
     if pyautogui is not None:
-        pyautogui.press('backspace', presses=presses, interval=0)
+        pyautogui.press("backspace", presses=presses, interval=0)
 
 
 def process_buffer() -> None:
@@ -59,7 +61,9 @@ def process_buffer() -> None:
     with BUFFER_LOCK:
         if not BUFFER:
             return
-        current = ''.join(BUFFER)
+        current = "".join(BUFFER)
+
+    logger.info("Buffer snapshot before conversion: %r", BUFFER.copy())
     converted = convert_pinyin_token(current)
     if converted == current:
         logger.info(f"No convertible token found for buffer: {current}")
@@ -75,23 +79,26 @@ def process_buffer() -> None:
 
 def handle_alpha_char(char: str) -> None:
     """Append a letter to buffer and trigger conversion if a tone digit follows."""
+
+    logger.info("BUFFER APPEND ALPHA: %r -> %r", char, BUFFER)
+
     with BUFFER_LOCK:
         BUFFER.append(char)
-        current = ''.join(BUFFER)
-    
-    if len(current) >= 2 and current[-1].isdigit() and current[-1] in '12345':
+        current = "".join(BUFFER)
+
+    if len(current) >= 2 and current[-1].isdigit() and current[-1] in "12345":
         process_buffer()
 
 
 def handle_digit_char(char: str) -> None:
     """Append a digit to the buffer and process conversion if valid."""
+    logger.info("BUFFER APPEND DIGIT: %r -> %r", char, BUFFER)
     with BUFFER_LOCK:
         if BUFFER and BUFFER[-1].isalpha():
             BUFFER.append(char)
-            current = ''.join(BUFFER)
         else:
-            
+
             BUFFER.clear()
             return
-    
+
     process_buffer()
