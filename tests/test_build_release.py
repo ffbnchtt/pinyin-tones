@@ -7,6 +7,11 @@ from tools import build_release
 
 
 class TestBuildReleaseHelpers(unittest.TestCase):
+    def test_normalize_platform_name_maps_python_platform_values(self):
+        self.assertEqual(build_release.normalize_platform_name('Darwin'), 'macos')
+        self.assertEqual(build_release.normalize_platform_name('Windows'), 'windows')
+        self.assertEqual(build_release.normalize_platform_name('Linux'), 'linux')
+
     def test_build_pyinstaller_command_windows_uses_ico(self):
         icon_assets = {'ico': Path('C:/tmp/pinyin_app.ico'), 'icns': Path('C:/tmp/pinyin_app.icns'), 'png': Path('C:/tmp/pinyin_app.png')}
         command = build_release.build_pyinstaller_command('windows', icon_assets)

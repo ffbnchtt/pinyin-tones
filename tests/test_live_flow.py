@@ -202,6 +202,13 @@ class TestLiveReplacementFlow(unittest.TestCase):
 
         self.assertIn(('type_text', 'hǎo'), self.calls)
 
+    def test_paste_text_falls_back_to_direct_typing_when_clipboard_copy_fails(self):
+        with mock.patch.object(clipboard_mod.pyperclip, 'copy', side_effect=RuntimeError('clipboard unavailable')):
+            pinyin_live.paste_text('hǎo')
+
+        self.assertIn(('type_text', 'hǎo'), self.calls)
+        self.assertNotIn(('keyDown', 'ctrl'), self.calls)
+
 
 class TestHotkeyCaptureFormatting(unittest.TestCase):
     def test_format_hotkey_normalizes_modifiers(self):

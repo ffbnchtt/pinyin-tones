@@ -35,12 +35,26 @@ LICENSE_SOURCE = ROOT_DIR / 'LICENSE'
 USER_GUIDE_SOURCE = ROOT_DIR / 'docs' / 'USER_GUIDE.md'
 
 
+def normalize_platform_name(system_name: str) -> str:
+    """Map Python platform names to the build helper's supported values."""
+    normalized = system_name.strip().lower()
+    aliases = {
+        'windows': 'windows',
+        'win32': 'windows',
+        'darwin': 'macos',
+        'mac': 'macos',
+        'macos': 'macos',
+        'linux': 'linux',
+    }
+    return aliases.get(normalized, normalized)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Build the Pinyin app for a target platform.')
     parser.add_argument(
         '--platform',
         choices=('windows', 'macos', 'linux'),
-        default=platform.system().lower(),
+        default=normalize_platform_name(platform.system()),
         help='Target platform used to choose PyInstaller flags and icon format.',
     )
     return parser.parse_args()

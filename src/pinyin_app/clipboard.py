@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import platform
 import threading
 import time
 import logging
@@ -99,6 +98,9 @@ def paste_text(text: str) -> None:
         pyperclip.copy(text)
         sync_clipboard_text(text)
         paste_via_clipboard()
+    except Exception:
+        logger.exception("Clipboard paste failed; falling back to direct typing")
+        type_text(text)
     finally:
         schedule_clipboard_restore()
 
