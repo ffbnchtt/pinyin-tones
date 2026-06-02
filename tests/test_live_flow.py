@@ -5,6 +5,7 @@ from unittest import mock
 from pinyin_app import pinyin_live
 from pinyin_app import clipboard as clipboard_mod
 from pinyin_app import buffer as buffer_mod
+from pinyin_app import keyboard_output as keyboard_output_mod
 
 
 class TestLiveReplacementFlow(unittest.TestCase):
@@ -27,31 +28,29 @@ class TestLiveReplacementFlow(unittest.TestCase):
             self.calls.append(('copy', text))
             self.clipboard['value'] = text
 
-        def fake_hotkey(*keys):
-            self.calls.append(('hotkey', keys))
+        def fake_press_backspace(presses):
+            self.calls.append(('press_backspace', presses))
 
-        def fake_press(key, presses=1, interval=0.0):
-            self.calls.append(('press', key, presses, interval))
+        def fake_paste_shortcut():
+            modifier = 'command' if keyboard_output_mod.platform.system() == 'Darwin' else 'ctrl'
+            self.calls.append(('keyDown', modifier))
+            self.calls.append(('press', 'v'))
+            self.calls.append(('keyUp', modifier))
 
-        def fake_key_down(key):
-            self.calls.append(('keyDown', key))
-
-        def fake_key_up(key):
-            self.calls.append(('keyUp', key))
+        def fake_type_text(text):
+            self.calls.append(('type_text', text))
 
         self.paste_patch = mock.patch.object(clipboard_mod.pyperclip, 'paste', side_effect=fake_paste)
         self.copy_patch = mock.patch.object(clipboard_mod.pyperclip, 'copy', side_effect=fake_copy)
-        self.hotkey_patch = mock.patch.object(clipboard_mod.pyautogui, 'hotkey', side_effect=fake_hotkey)
-        self.press_patch = mock.patch.object(buffer_mod.pyautogui, 'press', side_effect=fake_press)
-        self.key_down_patch = mock.patch.object(clipboard_mod.pyautogui, 'keyDown', side_effect=fake_key_down)
-        self.key_up_patch = mock.patch.object(clipboard_mod.pyautogui, 'keyUp', side_effect=fake_key_up)
+        self.press_patch = mock.patch.object(buffer_mod, 'press_backspace', side_effect=fake_press_backspace)
+        self.paste_shortcut_patch = mock.patch.object(clipboard_mod, 'paste_shortcut', side_effect=fake_paste_shortcut)
+        self.type_text_patch = mock.patch.object(clipboard_mod, 'type_text', side_effect=fake_type_text)
 
         self.paste_patch.start()
         self.copy_patch.start()
-        self.hotkey_patch.start()
         self.press_patch.start()
-        self.key_down_patch.start()
-        self.key_up_patch.start()
+        self.paste_shortcut_patch.start()
+        self.type_text_patch.start()
 
     def tearDown(self):
         mock.patch.stopall()
@@ -60,15 +59,15 @@ class TestLiveReplacementFlow(unittest.TestCase):
         buffer_mod.BUFFER[:] = list('hao3')
         pinyin_live.process_buffer()
         self.assertEqual(buffer_mod.BUFFER, [])
-        self.assertEqual(self.calls[0], ('press', 'backspace', 4, 0))
+        self.assertEqual(self.calls[0], ('press_backspace', 4))
         self.assertIn(('copy', 'hǎo'), self.calls)
         self.assertIn(('keyDown', 'ctrl'), self.calls)
-        self.assertIn(('press', 'v', 1, 0.0), self.calls)
+        self.assertIn(('press', 'v'), self.calls)
         self.assertIn(('keyUp', 'ctrl'), self.calls)
 
     def test_delete_last_token_uses_word_delete(self):
         pinyin_live.delete_last_token()
-        self.assertIn(('press', 'backspace', 1, 0), self.calls)
+        self.assertIn(('press_backspace', 1), self.calls)
 
     def test_process_buffer_ignores_non_tokens(self):
         buffer_mod.BUFFER[:] = list('hola')
@@ -89,16 +88,12 @@ class TestLiveReplacementFlow(unittest.TestCase):
 
         with mock.patch.object(clipboard_mod.pyperclip, 'paste', side_effect=fake_paste), \
              mock.patch.object(clipboard_mod.pyperclip, 'copy') as fake_copy, \
-             mock.patch.object(clipboard_mod.pyautogui, 'keyDown') as fake_key_down, \
-             mock.patch.object(clipboard_mod.pyautogui, 'press') as fake_press, \
-             mock.patch.object(clipboard_mod.pyautogui, 'keyUp') as fake_key_up, \
+             mock.patch.object(clipboard_mod, 'paste_shortcut') as fake_paste_shortcut, \
              mock.patch.object(clipboard_mod.time, 'sleep', side_effect=fake_sleep):
             pinyin_live.paste_text('hǎo')
 
         fake_copy.assert_called_with('hǎo')
-        fake_key_down.assert_called_once_with('ctrl')
-        fake_press.assert_called_with('v')
-        fake_key_up.assert_called_once_with('ctrl')
+        fake_paste_shortcut.assert_called_once_with()
         self.assertGreaterEqual(len(paste_calls), 2)
 
     def test_clipboard_restore_uses_initial_baseline(self):
@@ -185,18 +180,27 @@ class TestLiveReplacementFlow(unittest.TestCase):
         pinyin_live.process_buffer()
         outputs.extend(self.calls)
 
-        paste_sequences = [call for call in outputs if call == ('press', 'v', 1, 0.0)]
+        paste_sequences = [call for call in outputs if call == ('press', 'v')]
         self.assertIn(('copy', 'zhōng'), outputs)
         self.assertIn(('copy', 'guó'), outputs)
         self.assertGreaterEqual(len(paste_sequences), 2)
 
     def test_paste_text_uses_command_on_macos(self):
-        with mock.patch.object(clipboard_mod.platform, 'system', return_value='Darwin'), \
-             mock.patch.object(clipboard_mod.time, 'sleep', return_value=None):
+        with mock.patch.object(keyboard_output_mod.platform, 'system', return_value='Darwin'), \
+             mock.patch.object(clipboard_mod, 'paste_shortcut', new=keyboard_output_mod.paste_shortcut), \
+             mock.patch.object(keyboard_output_mod.KEYBOARD, 'press') as fake_press, \
+             mock.patch.object(keyboard_output_mod.KEYBOARD, 'release') as fake_release, \
+             mock.patch.object(keyboard_output_mod.time, 'sleep', return_value=None):
             pinyin_live.paste_text('hǎo')
 
-        self.assertIn(('keyDown', 'command'), self.calls)
-        self.assertIn(('keyUp', 'command'), self.calls)
+        fake_press.assert_any_call(keyboard_output_mod.Key.cmd)
+        fake_release.assert_any_call(keyboard_output_mod.Key.cmd)
+
+    def test_paste_text_falls_back_to_direct_typing_without_clipboard(self):
+        with mock.patch.object(clipboard_mod, 'pyperclip', None):
+            pinyin_live.paste_text('hǎo')
+
+        self.assertIn(('type_text', 'hǎo'), self.calls)
 
 
 class TestHotkeyCaptureFormatting(unittest.TestCase):

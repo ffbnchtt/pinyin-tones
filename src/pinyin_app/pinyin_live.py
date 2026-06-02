@@ -13,7 +13,6 @@ import logging
 from typing import Any, Optional
 
 from pynput import keyboard
-import pyautogui
 import pystray
 import platform
 import shlex
@@ -60,7 +59,6 @@ try:
     BUFFER = _buffer.BUFFER
     BUFFER_LOCK = _buffer.BUFFER_LOCK
     pyperclip = _clipboard.pyperclip
-    pyautogui = getattr(_buffer, "pyautogui", getattr(_clipboard, "pyautogui", None))
 
     # Re-export autostart helpers for compatibility (wrap to inject config)
     def get_launch_command_args():
@@ -192,10 +190,6 @@ fmt = logging.Formatter("%(asctime)s %(levelname)s: %(message)s")
 fh.setFormatter(fmt)
 if not logger.handlers:
     logger.addHandler(fh)
-
-pyautogui.PAUSE = 0
-pyautogui.FAILSAFE = False
-
 
 # Estado global
 ACTIVE = True

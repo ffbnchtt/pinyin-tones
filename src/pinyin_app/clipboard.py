@@ -12,10 +12,7 @@ try:
 except Exception:  # pragma: no cover - optional dep
     pyperclip = None
 
-try:
-    import pyautogui
-except Exception:  # pragma: no cover - optional dep
-    pyautogui = None
+from pinyin_app.keyboard_output import paste_shortcut, type_text
 
 logger = logging.getLogger("pinyin_app")
 
@@ -25,12 +22,6 @@ CLIPBOARD_SYNC_POLL = 0.001
 CLIPBOARD_BASELINE = None
 CLIPBOARD_RESTORE_TIMER = None
 CLIPBOARD_RESTORE_LOCK = threading.Lock()
-
-# Small delay required between Ctrl down, V press and Ctrl up.
-# Without it some applications receive a literal "v" instead of
-# interpreting the sequence as Ctrl+V.
-KEY_COMBO_DELAY = 0.05
-
 
 def sync_clipboard_text(expected_text: str) -> None:
     """Wait briefly until the clipboard contains expected_text.
@@ -90,13 +81,12 @@ def paste_text(text: str) -> None:
     """Paste text into focused application.
 
     Uses the clipboard if `pyperclip` is available, otherwise falls back to
-    `pyautogui.write`.
+    direct typing.
     """
     global CLIPBOARD_BASELINE
-    if pyperclip is None or pyautogui is None:
-        logger.info("pyperclip/pyautogui not available; falling back to typing")
-        if pyautogui is not None:
-            pyautogui.write(text, interval=0.01)
+    if pyperclip is None:
+        logger.info("pyperclip not available; falling back to typing")
+        type_text(text)
         return
     try:
         previous_clipboard = pyperclip.paste()
@@ -114,12 +104,4 @@ def paste_text(text: str) -> None:
 
 
 def paste_via_clipboard() -> None:
-    modifier = "command" if platform.system() == "Darwin" else "ctrl"
-    pyautogui.keyDown(modifier)
-    time.sleep(KEY_COMBO_DELAY)
-
-    try:
-        pyautogui.press("v")
-        time.sleep(KEY_COMBO_DELAY)
-    finally:
-        pyautogui.keyUp(modifier)
+    paste_shortcut()
