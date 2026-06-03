@@ -9,12 +9,17 @@ Si solo querés usar la aplicación, el proyecto está pensado para empaquetarse
 Instalá dependencias y ejecutá en desarrollo:
 
 ```powershell
-pip install -r requirements.txt
+pip install -e .
 python src/pinyin_app/pinyin_live.py
 
 # Alternativa si querés ejecutar como módulo instalado
-pip install -e .
 python -m pinyin_app
+```
+
+Si también vas a compilar ejecutables:
+
+```powershell
+pip install -e ".[dev]"
 ```
 
 Construcción recomendada (usá el helper de release):

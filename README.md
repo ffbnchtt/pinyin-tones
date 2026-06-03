@@ -15,7 +15,7 @@ Si preferís ejecutar desde la fuente (desarrollo):
 
 ### Prerrequisitos
 
-- Python 3.8+ (recomendado)
+- Python 3.10+ (recomendado)
 - `pip` y (opcional) un entorno virtual
 
 ### Instalación desde fuente
@@ -26,23 +26,45 @@ python -m venv .venv
 source .venv/bin/activate
 # Windows (PowerShell)
 .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+pip install -e .
 ```
 
 ### Ejecutar la aplicación (modo desarrollo)
 
 ```bash
-python -m src.pinyin_app
+python -m pinyin_app
 ```
+
+Si también querés compilar ejecutables desde la fuente:
+
+```bash
+pip install -e ".[dev]"
+```
+
+Para generar un paquete local:
+
+```bash
+python tools/build_release.py --platform windows
+```
+
+Reemplazá `windows` por `macos` o `linux` según corresponda.
 
 ## Uso básico
 
 - Activá o desactivá la funcionalidad desde el ícono en la bandeja.
 - Escribí un token con número de tono, por ejemplo `ni3` o `hao3` —se reemplaza automáticamente por `nǐ` o `hǎo`.
 
+## Compatibilidad y permisos
+
+- Windows: debería funcionar sin pasos extra en la mayoría de las instalaciones de escritorio.
+- macOS: la app necesita permisos de `Accesibilidad` y, según la versión del sistema, también `Input Monitoring` para escuchar el teclado global e inyectar el reemplazo en la app enfocada.
+- Linux: funciona mejor en sesiones `X11`; en `Wayland` la captura global y la inyección de teclado pueden estar limitadas por el compositor o directamente bloqueadas.
+
+Si la app parece iniciarse pero no detecta teclas o no reemplaza texto, revisá primero esos permisos del sistema.
+
 ## Configuración
 
-La configuración se guarda en [src/pinyin_app/config.json](src/pinyin_app/config.json). Desde la interfaz de configuración podés:
+La configuración se guarda en [`config.json`](config.json), junto al ejecutable o en la raíz del proyecto cuando corrés desde fuente. Desde la interfaz de configuración podés:
 
 - Cambiar el atajo global.
 - Activar/desactivar el inicio automático con el sistema.

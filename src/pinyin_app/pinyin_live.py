@@ -13,7 +13,6 @@ import logging
 from typing import Any, Optional
 
 from pynput import keyboard
-import pyautogui
 import pystray
 import platform
 import shlex
@@ -60,7 +59,6 @@ try:
     BUFFER = _buffer.BUFFER
     BUFFER_LOCK = _buffer.BUFFER_LOCK
     pyperclip = _clipboard.pyperclip
-    pyautogui = getattr(_buffer, "pyautogui", getattr(_clipboard, "pyautogui", None))
 
     # Re-export autostart helpers for compatibility (wrap to inject config)
     def get_launch_command_args():
@@ -193,10 +191,6 @@ fh.setFormatter(fmt)
 if not logger.handlers:
     logger.addHandler(fh)
 
-pyautogui.PAUSE = 0
-pyautogui.FAILSAFE = False
-
-
 # Estado global
 ACTIVE = True
 ACTIVE_LOCK = threading.Lock()
@@ -295,7 +289,7 @@ def on_type(key):
     with ACTIVE_LOCK:
         if not ACTIVE:
             return
-    if char.isalpha() and (char.isascii() or char in "vV"):
+    if char.isalpha() and (char.isascii() or char in "vVüÜ"):
         _buffer.handle_alpha_char(char)
     elif char.isdigit() and char in "12345":
         _buffer.handle_digit_char(char)

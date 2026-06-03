@@ -1,16 +1,21 @@
 # Instrucciones de compilación y ejecución
 
-Requisitos: Python 3.8+ y `pip`.
+Requisitos: Python 3.10+ y `pip`.
 
 Instalación en desarrollo:
 
 ```bash
-pip install -r requirements.txt
+pip install -e .
 python src/pinyin_app/pinyin_live.py
 
 # Alternativa si querés ejecutar como módulo instalado
-pip install -e .
 python -m pinyin_app
+```
+
+Si también vas a compilar ejecutables:
+
+```bash
+pip install -e ".[dev]"
 ```
 
 Compilación con el script de release (recomendado):

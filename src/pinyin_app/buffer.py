@@ -6,13 +6,9 @@ import threading
 import logging
 import time
 
-try:
-    import pyautogui
-except Exception:  # pragma: no cover - optional dep
-    pyautogui = None
-
 from pinyin_app.pinyin_converter import convert_pinyin_token
 from pinyin_app.clipboard import paste_text
+from pinyin_app.keyboard_output import press_backspace
 
 logger = logging.getLogger("pinyin_app")
 
@@ -52,8 +48,7 @@ def delete_last_token() -> None:
     with BUFFER_LOCK:
         presses = max(1, len(BUFFER))
     logger.info("Deleting token: buffer=%r presses=%d", "".join(BUFFER), presses)
-    if pyautogui is not None:
-        pyautogui.press("backspace", presses=presses, interval=0)
+    press_backspace(presses)
 
 
 def process_buffer() -> None:
