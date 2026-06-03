@@ -6,6 +6,7 @@ from pinyin_app import pinyin_live
 from pinyin_app import clipboard as clipboard_mod
 from pinyin_app import buffer as buffer_mod
 from pinyin_app import keyboard_output as keyboard_output_mod
+from pinyin_app.update_check import ReleaseInfo, UpdateState
 
 
 class TestLiveReplacementFlow(unittest.TestCase):
@@ -380,6 +381,106 @@ class TestAutostartHelpers(unittest.TestCase):
         self.assertIn('/v "Pinyin Tones" /f', cmd)
         # Windows Run entries have a practical command length limit near MAX_PATH.
         self.assertLessEqual(len(cmd), 260)
+
+
+class TestUpdateController(unittest.TestCase):
+    def test_apply_available_update_requests_dialog_and_refreshes_menu(self):
+        app = object.__new__(pinyin_live.PinyinApp)
+        app.config = dict(pinyin_live.DEFAULT_CONFIG)
+        app.icon = mock.Mock()
+        app.update_lock = pinyin_live.threading.Lock()
+        app.update_state = UpdateState(status="idle")
+
+        state = UpdateState(
+            status="available",
+            latest_release=ReleaseInfo(
+                version="0.2.0",
+                tag="v0.2.0",
+                html_url="https://example/release",
+                asset_name="pinyin-tones-windows.zip",
+                asset_url="https://example/file.zip",
+                published_at=None,
+            ),
+        )
+
+        pinyin_live.UPDATE_DIALOG_REQUESTED.clear()
+        app._set_update_state(state)
+        if app._should_prompt_for_update(state):
+            pinyin_live.UPDATE_DIALOG_REQUESTED.set()
+
+        self.assertTrue(pinyin_live.UPDATE_DIALOG_REQUESTED.is_set())
+        app.icon.update_menu.assert_called_once_with()
+
+    def test_should_prompt_for_update_respects_dismissed_version(self):
+        app = object.__new__(pinyin_live.PinyinApp)
+        app.config = dict(pinyin_live.DEFAULT_CONFIG)
+
+        state = UpdateState(
+            status="available",
+            latest_release=ReleaseInfo(
+                version="0.2.0",
+                tag="v0.2.0",
+                html_url="https://example/release",
+                asset_name=None,
+                asset_url=None,
+                published_at=None,
+            ),
+        )
+
+        self.assertTrue(app._should_prompt_for_update(state))
+        self.assertTrue(app._should_prompt_for_update(state, force_prompt=True))
+
+    def test_can_download_update_when_release_asset_exists(self):
+        app = object.__new__(pinyin_live.PinyinApp)
+        app.update_lock = pinyin_live.threading.Lock()
+        app.update_state = UpdateState(
+            status="available",
+            latest_release=ReleaseInfo(
+                version="0.2.0",
+                tag="v0.2.0",
+                html_url="https://example/release",
+                asset_name="pinyin-tones-windows.zip",
+                asset_url="https://example/file.zip",
+                published_at=None,
+            ),
+        )
+        self.assertTrue(app._can_download_update())
+
+    def test_update_status_label_reflects_downloaded_update(self):
+        app = object.__new__(pinyin_live.PinyinApp)
+        app.config = dict(pinyin_live.DEFAULT_CONFIG)
+        app.update_lock = pinyin_live.threading.Lock()
+        app.update_state = UpdateState(
+            status="available",
+            latest_release=ReleaseInfo(
+                version="0.2.0",
+                tag="v0.2.0",
+                html_url="https://example/release",
+                asset_name="pinyin-tones-windows.zip",
+                asset_url="https://example/file.zip",
+                published_at=None,
+            ),
+            downloaded_path="C:/tmp/pinyin-tones-windows.zip",
+        )
+        self.assertEqual(
+            app._update_status_label(),
+            "Actualización descargada: v0.2.0",
+        )
+
+    def test_update_status_label_is_descriptive_before_first_check(self):
+        app = object.__new__(pinyin_live.PinyinApp)
+        app.config = dict(pinyin_live.DEFAULT_CONFIG)
+        app.update_lock = pinyin_live.threading.Lock()
+        app.update_state = UpdateState(status="idle")
+
+        self.assertEqual(
+            app._update_status_label(),
+            "Actualizado",
+        )
+        self.assertEqual(
+            app._update_menu_label(),
+            "Actualizado",
+        )
 
 
 if __name__ == '__main__':
