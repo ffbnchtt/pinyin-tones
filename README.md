@@ -49,6 +49,12 @@ python tools/build_release.py --platform windows
 
 Reemplazá `windows` por `macos` o `linux` según corresponda.
 
+Cuando publiques releases en GitHub para que la app pueda detectar actualizaciones, usá nombres de assets estables por plataforma:
+
+- `pinyin-tones-windows.zip`
+- `pinyin-tones-macos.zip`
+- `pinyin-tones-linux.zip`
+
 ## Uso básico
 
 - Activá o desactivá la funcionalidad desde el ícono en la bandeja.
@@ -68,6 +74,14 @@ La configuración se guarda en [`config.json`](config.json), junto al ejecutable
 
 - Cambiar el atajo global.
 - Activar/desactivar el inicio automático con el sistema.
+
+Además, la app guarda estado interno para actualizaciones:
+
+- `update_check_enabled`
+- `update_check_interval_hours`
+- `last_update_check_at`
+- `downloaded_update_version`
+- `downloaded_update_path`
 
 Para ajustes avanzados de reemplazo, revisá `src/pinyin_app/pinyin_converter.py` y `src/pinyin_app/pinyin_live.py`.
 

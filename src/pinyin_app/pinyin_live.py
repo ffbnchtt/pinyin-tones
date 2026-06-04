@@ -16,6 +16,7 @@ from pynput import keyboard
 import pystray
 import platform
 import shlex
+from tkinter import messagebox
 
 # When running `python src/pinyin_app/pinyin_live.py`, ensure the src directory
 # is on sys.path so package imports resolve correctly.
@@ -42,6 +43,10 @@ try:
     )
     from pinyin_app.settings_ui import HotkeySettingsDialog, run_hotkey_settings_dialog
     from pinyin_app.tray_ui import create_tray_image
+    from pinyin_app.update_dialog import run_update_dialog
+    from pinyin_app.update_check import ReleaseInfo, UpdateState
+    from pinyin_app.version import __version__
+    from pinyin_app import update_check as _update_check
     from pinyin_app import clipboard as _clipboard
     from pinyin_app import buffer as _buffer
     from pinyin_app import autostart as _autostart
@@ -175,6 +180,10 @@ except ImportError:  # pragma: no cover - script execution fallback
     )
     from settings_ui import HotkeySettingsDialog, run_hotkey_settings_dialog
     from tray_ui import create_tray_image
+    from update_dialog import run_update_dialog
+    from update_check import ReleaseInfo, UpdateState
+    from version import __version__
+    import update_check as _update_check
 
 
 # Paths
@@ -190,6 +199,9 @@ fmt = logging.Formatter("%(asctime)s %(levelname)s: %(message)s")
 fh.setFormatter(fmt)
 if not logger.handlers:
     logger.addHandler(fh)
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(fmt)
+    logger.addHandler(stream_handler)
 
 # Estado global
 ACTIVE = True
@@ -198,11 +210,23 @@ PRESSED_KEYS = set()
 DEFAULT_HOTKEY = "<ctrl>+<alt>+<shift>+p"
 CONFIG_DIALOG_OPEN = threading.Event()
 SETTINGS_REQUESTED = threading.Event()
+UPDATE_DIALOG_REQUESTED = threading.Event()
 STARTUP_ENABLED_DEFAULT = False
-DEFAULT_CONFIG = {"hotkey": DEFAULT_HOTKEY, "autostart": STARTUP_ENABLED_DEFAULT}
+UPDATE_CHECK_ENABLED_DEFAULT = True
+UPDATE_CHECK_INTERVAL_HOURS_DEFAULT = 24
+DEFAULT_CONFIG = {
+    "hotkey": DEFAULT_HOTKEY,
+    "autostart": STARTUP_ENABLED_DEFAULT,
+    "update_check_enabled": UPDATE_CHECK_ENABLED_DEFAULT,
+    "update_check_interval_hours": UPDATE_CHECK_INTERVAL_HOURS_DEFAULT,
+    "last_update_check_at": None,
+    "downloaded_update_version": None,
+    "downloaded_update_path": None,
+}
 STOP_REQUESTED = threading.Event()
 DIALOG_TITLE = "Configuración"
 APP_NAME = "Pinyin Tones"
+APP_VERSION = __version__
 WINDOWS_RUN_KEY_PATH = r"Software\Microsoft\Windows\CurrentVersion\Run"
 WINDOWS_RUN_VALUE_NAME = "Pinyin Tones"
 MAC_LAUNCH_AGENT_LABEL = "com.federico.pinyin-tones"
@@ -313,7 +337,10 @@ class PinyinApp:
         self.toggle_listener: Optional[keyboard.Listener] = None
         self.icon: Optional[Any] = None
         self.autostart_config = build_autostart_config()
+        self.update_state = UpdateState(status="idle")
+        self.update_lock = threading.Lock()
         self._build_listeners()
+        self._prune_downloaded_update_state()
 
     def _build_listeners(self):
         """Create global keyboard listeners."""
@@ -333,6 +360,7 @@ class PinyinApp:
         if self.toggle_listener:
             logger.info("Starting hotkey listener")
             self.toggle_listener.start()
+        self.request_update_check()
         threading.Thread(target=self._run_tray, daemon=True).start()
 
     def stop(self):
@@ -357,6 +385,223 @@ class PinyinApp:
         """Recompute hotkey modifiers and trigger from config."""
         self.hotkey_modifiers, self.hotkey_trigger = parse_hotkey(self.hotkey)
         logger.info(f"Hotkey updated to {self.hotkey}")
+
+    def _save_config(self) -> None:
+        save_config(CONFIG_PATH, self.config)
+
+    def _downloads_dir(self) -> str:
+        return _update_check.ensure_download_dir(ROOT_DIR)
+
+    def _prune_downloaded_update_state(self) -> None:
+        downloaded_version = self.config.get("downloaded_update_version")
+        downloaded_path = self.config.get("downloaded_update_path")
+        if not downloaded_version or not downloaded_path:
+            return
+        if not os.path.exists(downloaded_path) or not _update_check.is_newer_version(
+            downloaded_version, APP_VERSION
+        ):
+            self.config["downloaded_update_version"] = None
+            self.config["downloaded_update_path"] = None
+            self._save_config()
+
+    def _set_update_state(self, state: UpdateState) -> None:
+        with self.update_lock:
+            self.update_state = state
+        if self.icon and hasattr(self.icon, "update_menu"):
+            try:
+                self.icon.update_menu()
+            except Exception:
+                pass
+
+    def _get_update_state(self) -> UpdateState:
+        with self.update_lock:
+            return self.update_state
+
+    def _should_prompt_for_update(
+        self, state: UpdateState, force_prompt: bool = False
+    ) -> bool:
+        release = state.latest_release
+        return release is not None
+
+    def request_update_check(self, force: bool = False) -> None:
+        """Start a background update check."""
+        logger.info("Queueing update check force=%s", force)
+        thread = threading.Thread(
+            target=self._run_update_check,
+            kwargs={"force": force},
+            daemon=True,
+        )
+        thread.start()
+
+    def _run_update_check(self, force: bool = False) -> None:
+        """Fetch latest release information without blocking the tray loop."""
+        if not force and not _update_check.should_check_for_updates(self.config):
+            logger.info("Skipping update check because interval has not elapsed")
+            return
+        logger.info(
+            "Starting update check force=%s current_version=%s", force, APP_VERSION
+        )
+        self._set_update_state(UpdateState(status="checking"))
+        state = _update_check.check_for_updates(
+            current_version=APP_VERSION,
+            downloaded_version=self.config.get("downloaded_update_version"),
+            downloaded_path=self.config.get("downloaded_update_path"),
+        )
+        _update_check.mark_update_check(self.config)
+        self._save_config()
+        self._set_update_state(state)
+        if state.latest_release is not None:
+            logger.info(
+                "Update check finished status=%s latest=%s downloaded=%s",
+                state.status,
+                state.latest_release.version,
+                bool(state.downloaded_path),
+            )
+        else:
+            logger.info(
+                "Update check finished status=%s error=%r",
+                state.status,
+                state.last_error,
+            )
+        if self._should_prompt_for_update(state, force_prompt=force):
+            logger.info(
+                "Requesting update dialog for version=%s", state.latest_release.version
+            )
+            UPDATE_DIALOG_REQUESTED.set()
+
+    def _update_status_label(self, _item=None) -> str:
+        state = self._get_update_state()
+        if state.status == "checking":
+            return "Buscando actualizaciones..."
+        if state.latest_release and state.downloaded_path:
+            return f"Actualización descargada: v{state.latest_release.version}"
+        if state.latest_release:
+            return f"Nueva versión disponible: v{state.latest_release.version}"
+        if state.status == "up_to_date":
+            return "Actualizado"
+        if state.status == "error":
+            return "No se pudo buscar actualizaciones"
+        return "Actualizado"
+
+    def _app_info_label(self, _item=None) -> str:
+        return f"{APP_NAME} v{APP_VERSION}"
+
+    def _update_menu_label(self, _item=None) -> str:
+        state = self._get_update_state()
+        if state.status == "checking":
+            return "Buscando actualizaciones..."
+        if state.latest_release and state.downloaded_path:
+            return f"Actualización descargada (v{state.latest_release.version})"
+        if state.latest_release:
+            return f"Actualización disponible (v{state.latest_release.version})"
+        if state.status in {"idle", "up_to_date"}:
+            return "Actualizado"
+        if state.status == "error":
+            return "No se pudo buscar actualización"
+        return "Actualizado"
+
+    def _can_open_download_folder(self, _item=None) -> bool:
+        path = self.config.get("downloaded_update_path")
+        return bool(path and os.path.exists(path))
+
+    def _can_download_update(self, _item=None) -> bool:
+        state = self._get_update_state()
+        release = state.latest_release
+        if release is None or not release.asset_name:
+            return False
+        return bool(release.asset_url)
+
+    def _should_show_update_menu(self, _item=None) -> bool:
+        return self._can_download_update()
+
+    def open_download_folder(self, *_):
+        """Open the downloaded update folder when available."""
+        path = self.config.get("downloaded_update_path")
+        if not path:
+            return
+        try:
+            logger.info("Opening update download folder path=%s", path)
+            _update_check.open_download_folder(path)
+        except Exception:
+            logger.exception("Failed to open update download folder")
+
+    def download_latest_update(self) -> bool:
+        """Download the latest compatible release asset and guide the user."""
+        state = self._get_update_state()
+        release = state.latest_release
+        if release is None or not release.asset_name:
+            logger.info("No compatible downloadable asset found for latest release")
+            messagebox.showinfo(
+                "Actualización",
+                "No hay una descarga automática disponible para este sistema en esta release.",
+            )
+            return True
+        if not release.asset_url:
+            logger.info("No compatible downloadable asset found for latest release")
+            messagebox.showinfo(
+                "Actualización",
+                "No hay una descarga automática disponible para este sistema en esta release.",
+            )
+            return True
+        existing_path = _update_check.existing_download_for_release(
+            release,
+            self.config.get("downloaded_update_version"),
+            self.config.get("downloaded_update_path"),
+        )
+        try:
+            if existing_path is None:
+                logger.info(
+                    "Downloading update version=%s asset=%s",
+                    release.version,
+                    release.asset_name,
+                )
+                existing_path = _update_check.download_release_asset(
+                    release,
+                    self._downloads_dir(),
+                )
+            else:
+                logger.info(
+                    "Reusing previously downloaded update version=%s path=%s",
+                    release.version,
+                    existing_path,
+                )
+            self.config["downloaded_update_version"] = release.version
+            self.config["downloaded_update_path"] = existing_path
+            self._save_config()
+            state.downloaded_path = existing_path
+            self._set_update_state(state)
+            _update_check.open_download_folder(existing_path)
+            messagebox.showinfo(
+                "Actualización descargada",
+                "La nueva versión se descargó correctamente. Cerrá la app actual y reemplazá o instalá el paquete descargado.",
+            )
+            return True
+        except Exception as exc:
+            logger.exception("Failed to download update")
+            messagebox.showerror(
+                "Error de actualización",
+                f"No se pudo descargar la actualización.\n\n{exc}",
+            )
+            return False
+
+    def remind_update_later(self) -> None:
+        """Leave the update available without muting future notifications."""
+        logger.info("Update reminder deferred by user")
+
+    def show_update_dialog(self) -> None:
+        """Open the update-available dialog on the main thread."""
+        state = self._get_update_state()
+        release = state.latest_release
+        if release is None:
+            return
+        run_update_dialog(
+            self,
+            APP_VERSION,
+            release,
+            logger,
+            self.download_latest_update,
+            self.remind_update_later,
+        )
 
     def toggle_active(self):
         """Toggle the live conversion state."""
@@ -453,12 +698,31 @@ class PinyinApp:
         """Run the system tray icon loop."""
         image = create_tray_image(ACTIVE)
         menu = pystray.Menu(
+            pystray.MenuItem(self._app_info_label, lambda: None, enabled=False),
+            pystray.Menu.SEPARATOR,
             pystray.MenuItem(self._tray_toggle_label, lambda: self.toggle_active()),
             pystray.MenuItem("Configuración", lambda: self.open_settings()),
             pystray.Menu.SEPARATOR,
+            pystray.MenuItem(
+                self._update_menu_label,
+                pystray.Menu(
+                    pystray.MenuItem(
+                        "Descargar actualización",
+                        lambda: self.download_latest_update(),
+                        enabled=self._can_download_update,
+                    ),
+                    pystray.MenuItem(
+                        "Abrir carpeta de descargas",
+                        lambda: self.open_download_folder(),
+                        enabled=self._can_open_download_folder,
+                    ),
+                ),
+                visible=self._should_show_update_menu,
+            ),
+            pystray.Menu.SEPARATOR,
             pystray.MenuItem("Salir", lambda: quit_app(self)),
         )
-        self.icon = pystray.Icon("pinyin", image, "Pinyin Tones", menu)
+        self.icon = pystray.Icon("pinyin", image, f"{APP_NAME} v{APP_VERSION}", menu)
         if self.icon:
             self.icon.run()
 
@@ -493,6 +757,15 @@ def run_hotkey_settings_dialog_for_app(app: PinyinApp) -> None:
         CONFIG_DIALOG_OPEN.clear()
 
 
+def run_update_dialog_for_app(app: PinyinApp) -> None:
+    """Open the update notification dialog on the main thread."""
+    CONFIG_DIALOG_OPEN.set()
+    try:
+        app.show_update_dialog()
+    finally:
+        CONFIG_DIALOG_OPEN.clear()
+
+
 def main():
     """Entry point for the desktop app."""
     print("App de Pinyin en vivo")
@@ -510,6 +783,11 @@ def main():
                     "Settings requested from tray; opening dialog on main thread"
                 )
                 run_hotkey_settings_dialog_for_app(app)
+                continue
+            if UPDATE_DIALOG_REQUESTED.is_set() and not CONFIG_DIALOG_OPEN.is_set():
+                UPDATE_DIALOG_REQUESTED.clear()
+                logger.info("Update dialog requested; opening on main thread")
+                run_update_dialog_for_app(app)
                 continue
             time.sleep(0.5)
     except KeyboardInterrupt:
