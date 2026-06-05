@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pinyin Conversion Rules"
+  short_description: "Maintain pure pinyin tone conversion behavior"
+  default_prompt: "Use $pinyin-conversion-rules to adjust pinyin token conversion behavior and tests."

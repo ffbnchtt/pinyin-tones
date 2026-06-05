@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pinyin Live Runtime"
+  short_description: "Work on keyboard listeners, UI, and clipboard flow"
+  default_prompt: "Use $pinyin-live-runtime to modify the live keyboard replacement workflow safely."

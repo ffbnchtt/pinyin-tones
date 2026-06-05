@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pinyin QA Docs"
+  short_description: "Review tests, docs, and project consistency"
+  default_prompt: "Use $pinyin-qa-docs to review test coverage, docs, and project consistency."

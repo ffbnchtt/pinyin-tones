@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pinyin Release Updates"
+  short_description: "Handle packaging, versioning, and update checks"
+  default_prompt: "Use $pinyin-release-updates to change packaging, release assets, or update-check behavior."
