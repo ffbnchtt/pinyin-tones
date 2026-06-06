@@ -17,7 +17,7 @@ BUFFER_LOCK = threading.Lock()
 SUPPRESS_LOCK = threading.Lock()
 SUPPRESS_UNTIL = 0.0
 SUPPRESS_DURATION = 0.25
-REPLACEMENT_DELAY = 0.75
+REPLACEMENT_DELAY = 0
 
 
 def suppress_input_for(duration: float) -> None:
