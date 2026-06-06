@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import Optional, Tuple
 
-__version__ = "0.1.0"
+__version__ = "1.0.0"
 
 _VERSION_RE = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)$")
 

@@ -31,6 +31,21 @@ class TestBuildReleaseHelpers(unittest.TestCase):
         self.assertIn('--noconsole', command)
         self.assertNotIn('--icon', command)
 
+    def test_build_pyinstaller_env_sets_windows_tcl_paths(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            tcl_root = Path(temp_dir) / 'tcl'
+            tcl_library = tcl_root / 'tcl8.6'
+            tk_library = tcl_root / 'tk8.6'
+            tcl_library.mkdir(parents=True)
+            tk_library.mkdir(parents=True)
+
+            with mock.patch.object(build_release.sys, 'base_prefix', temp_dir), \
+                 mock.patch.dict(build_release.os.environ, {}, clear=True):
+                env = build_release.build_pyinstaller_env('windows')
+
+            self.assertEqual(env['TCL_LIBRARY'], str(tcl_library))
+            self.assertEqual(env['TK_LIBRARY'], str(tk_library))
+
     def test_build_icon_assets_produces_png_and_ico(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             with mock.patch.object(build_release, 'ASSET_DIR', Path(temp_dir)):

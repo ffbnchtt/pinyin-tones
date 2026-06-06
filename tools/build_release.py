@@ -206,14 +206,28 @@ def copy_release_payload(platform_name: str, artifact_path: Path, icon_assets: d
     return platform_release_dir
 
 
-def run_pyinstaller(command: list[str]) -> None:
-    subprocess.run(command, cwd=str(ROOT_DIR), check=True)
+def build_pyinstaller_env(platform_name: str) -> dict[str, str]:
+    env = os.environ.copy()
+    if platform_name != 'windows':
+        return env
+
+    tcl_root = Path(sys.base_prefix) / 'tcl'
+    tcl_library = tcl_root / 'tcl8.6'
+    tk_library = tcl_root / 'tk8.6'
+    if tcl_library.exists() and tk_library.exists():
+        env.setdefault('TCL_LIBRARY', str(tcl_library))
+        env.setdefault('TK_LIBRARY', str(tk_library))
+    return env
+
+
+def run_pyinstaller(command: list[str], platform_name: str) -> None:
+    subprocess.run(command, cwd=str(ROOT_DIR), env=build_pyinstaller_env(platform_name), check=True)
 
 
 def build(platform_name: str) -> Path:
     icon_assets = ensure_icon_assets()
     command = build_pyinstaller_command(platform_name, icon_assets)
-    run_pyinstaller(command)
+    run_pyinstaller(command, platform_name)
     artifact_path = find_artifact_path(platform_name)
     release_dir = copy_release_payload(platform_name, artifact_path, icon_assets)
     return release_dir
