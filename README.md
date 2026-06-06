@@ -9,7 +9,7 @@ Convierte tonos de Pinyin en tiempo real mientras escribís. Se ejecuta en segun
 ## Inicio rápido
 
 1. Descargá la versión para tu sistema desde la página de [releases](https://github.com/ffbnchtt/pinyin-tones/releases). Cada release incluye tres paquetes `.zip` (Windows, macOS, Linux).
-2. Descomprimí y ejecutá la aplicación; verás el ícono en la bandeja del sistema.
+2. Descomprimí y ejecutá la aplicación; vas a ver el ícono en la bandeja del sistema.
 
 Si preferís ejecutar desde la fuente (desarrollo):
 
