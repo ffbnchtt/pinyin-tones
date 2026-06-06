@@ -11,6 +11,7 @@ suite = unittest.TestSuite()
 suite.addTests(loader.loadTestsFromName('tests.test_converter'))
 suite.addTests(loader.loadTestsFromName('tests.test_live_flow'))
 suite.addTests(loader.loadTestsFromName('tests.test_build_release'))
+suite.addTests(loader.loadTestsFromName('tests.test_dev_entrypoint'))
 runner = unittest.TextTestRunner(verbosity=2)
 res = runner.run(suite)
 if not res.wasSuccessful():
