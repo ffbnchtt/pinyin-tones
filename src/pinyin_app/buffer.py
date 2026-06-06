@@ -17,6 +17,7 @@ BUFFER_LOCK = threading.Lock()
 SUPPRESS_LOCK = threading.Lock()
 SUPPRESS_UNTIL = 0.0
 SUPPRESS_DURATION = 0.25
+REPLACEMENT_DELAY = 0.75
 
 
 def suppress_input_for(duration: float) -> None:
@@ -65,6 +66,8 @@ def process_buffer() -> None:
         return
     logger.info(f"Converting token '{current}' -> '{converted}'")
     try:
+        if REPLACEMENT_DELAY > 0:
+            time.sleep(REPLACEMENT_DELAY)
         suppress_input_for(SUPPRESS_DURATION)
         delete_last_token()
         paste_text(converted)

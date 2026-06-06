@@ -18,6 +18,8 @@ class TestLiveReplacementFlow(unittest.TestCase):
         pinyin_live.PRESSED_KEYS = set()
         clipboard_mod.CLIPBOARD_BASELINE = None
         clipboard_mod.CLIPBOARD_RESTORE_TIMER = None
+        self.original_replacement_delay = buffer_mod.REPLACEMENT_DELAY
+        buffer_mod.REPLACEMENT_DELAY = 0.0
         self.calls = []
         self.clipboard = {'value': 'original'}
 
@@ -54,6 +56,7 @@ class TestLiveReplacementFlow(unittest.TestCase):
         self.type_text_patch.start()
 
     def tearDown(self):
+        buffer_mod.REPLACEMENT_DELAY = self.original_replacement_delay
         mock.patch.stopall()
 
     def test_process_buffer_replaces_exact_token(self):
@@ -150,6 +153,16 @@ class TestLiveReplacementFlow(unittest.TestCase):
         with mock.patch.object(buffer_mod.time, 'monotonic', return_value=1000.0):
             pinyin_live.process_buffer()
         self.assertGreaterEqual(buffer_mod.SUPPRESS_UNTIL, 1000.0)
+
+    def test_process_buffer_waits_before_replacement_when_delay_configured(self):
+        buffer_mod.REPLACEMENT_DELAY = 1.25
+        buffer_mod.BUFFER[:] = list('hao3')
+
+        with mock.patch.object(buffer_mod.time, 'sleep') as fake_sleep:
+            pinyin_live.process_buffer()
+
+        fake_sleep.assert_any_call(1.25)
+        self.assertEqual(self.calls[0], ('press_backspace', 4))
 
     def test_configuration_dialog_blocks_global_listeners(self):
         pinyin_live.CONFIG_DIALOG_OPEN.set()
