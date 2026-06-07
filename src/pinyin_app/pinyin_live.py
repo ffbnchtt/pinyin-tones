@@ -10,6 +10,7 @@ import time
 import threading
 import os
 import logging
+import tempfile
 from typing import Any, Optional
 
 from pynput import keyboard
@@ -232,6 +233,7 @@ WINDOWS_RUN_VALUE_NAME = "Pinyin Tones"
 MAC_LAUNCH_AGENT_LABEL = "com.federico.pinyin-tones"
 LINUX_AUTOSTART_FILENAME = "pinyin-tones.desktop"
 SCRIPT_REL_PATH = os.path.join("src", "pinyin_app", "pinyin_live.py")
+SINGLE_INSTANCE_LOCK_FILENAME = "pinyin-tones.lock"
 
 
 def build_autostart_config() -> AutostartConfig:
@@ -246,6 +248,78 @@ def build_autostart_config() -> AutostartConfig:
         linux_autostart_filename=LINUX_AUTOSTART_FILENAME,
         script_rel_path=SCRIPT_REL_PATH,
     )
+
+
+def get_single_instance_lock_path() -> str:
+    """Return the per-user lock path used to prevent duplicate app instances."""
+    return os.path.join(tempfile.gettempdir(), SINGLE_INSTANCE_LOCK_FILENAME)
+
+
+class SingleInstanceLock:
+    """Non-blocking process lock held while the desktop app is running."""
+
+    def __init__(self, path: str):
+        self.path = path
+        self.handle: Optional[Any] = None
+
+    def acquire(self) -> bool:
+        """Acquire the lock, returning False when another instance holds it."""
+        os.makedirs(os.path.dirname(self.path), exist_ok=True)
+        handle = open(self.path, "a+", encoding="utf-8")
+        try:
+            self._lock_handle(handle)
+        except OSError:
+            handle.close()
+            return False
+        handle.seek(0)
+        handle.truncate()
+        handle.write(str(os.getpid()))
+        handle.flush()
+        self.handle = handle
+        return True
+
+    def release(self) -> None:
+        """Release the held lock."""
+        if self.handle is None:
+            return
+        try:
+            self._unlock_handle(self.handle)
+        except OSError:
+            pass
+        try:
+            self.handle.close()
+        finally:
+            self.handle = None
+
+    def _lock_handle(self, handle: Any) -> None:
+        handle.seek(0)
+        if platform.system() == "Windows":
+            import msvcrt
+
+            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            return
+        import fcntl
+
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+    def _unlock_handle(self, handle: Any) -> None:
+        handle.seek(0)
+        if platform.system() == "Windows":
+            import msvcrt
+
+            msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            return
+        import fcntl
+
+        fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+    def __enter__(self):
+        if not self.acquire():
+            return None
+        return self
+
+    def __exit__(self, _exc_type, _exc, _tb):
+        self.release()
 
 
 def is_configuration_open() -> bool:
@@ -768,6 +842,15 @@ def run_update_dialog_for_app(app: PinyinApp) -> None:
 
 def main():
     """Entry point for the desktop app."""
+    with SingleInstanceLock(get_single_instance_lock_path()) as instance_lock:
+        if instance_lock is None:
+            logger.info("Another %s instance is already running; exiting", APP_NAME)
+            return
+        _run_main_loop()
+
+
+def _run_main_loop():
+    """Run the desktop app after the single-instance guard is held."""
     print("App de Pinyin en vivo")
     print("Usá el ícono en la bandeja para ver el estado y modificar atajo")
     app = PinyinApp()

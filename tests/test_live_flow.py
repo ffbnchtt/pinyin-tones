@@ -1,4 +1,5 @@
 import unittest
+import tempfile
 from types import SimpleNamespace
 from unittest import mock
 
@@ -394,6 +395,59 @@ class TestAutostartHelpers(unittest.TestCase):
         self.assertIn('/v "Pinyin Tones" /f', cmd)
         # Windows Run entries have a practical command length limit near MAX_PATH.
         self.assertLessEqual(len(cmd), 260)
+
+
+class TestSingleInstanceGuard(unittest.TestCase):
+    def test_single_instance_lock_rejects_second_acquire_until_released(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            lock_path = pinyin_live.os.path.join(tmp_dir, "pinyin-tones.lock")
+            first = pinyin_live.SingleInstanceLock(lock_path)
+            second = pinyin_live.SingleInstanceLock(lock_path)
+
+            self.assertTrue(first.acquire())
+            try:
+                self.assertFalse(second.acquire())
+            finally:
+                first.release()
+
+            try:
+                self.assertTrue(second.acquire())
+            finally:
+                second.release()
+
+    def test_main_exits_before_startup_when_another_instance_is_running(self):
+        class BusyLock:
+            def __init__(self, _path):
+                pass
+
+            def __enter__(self):
+                return None
+
+            def __exit__(self, _exc_type, _exc, _tb):
+                return None
+
+        with mock.patch.object(pinyin_live, "SingleInstanceLock", BusyLock), \
+             mock.patch.object(pinyin_live, "_run_main_loop") as fake_run:
+            pinyin_live.main()
+
+        fake_run.assert_not_called()
+
+    def test_main_runs_when_single_instance_lock_is_acquired(self):
+        class AcquiredLock:
+            def __init__(self, _path):
+                pass
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, _exc_type, _exc, _tb):
+                return None
+
+        with mock.patch.object(pinyin_live, "SingleInstanceLock", AcquiredLock), \
+             mock.patch.object(pinyin_live, "_run_main_loop") as fake_run:
+            pinyin_live.main()
+
+        fake_run.assert_called_once_with()
 
 
 class TestUpdateController(unittest.TestCase):
