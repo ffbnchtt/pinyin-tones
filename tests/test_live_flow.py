@@ -226,6 +226,46 @@ class TestLiveReplacementFlow(unittest.TestCase):
 
 
 class TestHotkeyCaptureFormatting(unittest.TestCase):
+    def test_dialog_run_does_not_start_capture_listener_on_open(self):
+        dialog = object.__new__(pinyin_live.HotkeySettingsDialog)
+        dialog.root = mock.Mock()
+        dialog._build_window = mock.Mock()
+        dialog._start_listener = mock.Mock()
+        dialog._stop_listener = mock.Mock()
+        dialog.logger = mock.Mock()
+
+        pinyin_live.HotkeySettingsDialog.run(dialog)
+
+        dialog._build_window.assert_called_once_with()
+        dialog.root.mainloop.assert_called_once_with()
+        dialog._start_listener.assert_not_called()
+        dialog._stop_listener.assert_called_once_with()
+
+    def test_dialog_start_capture_arms_listener_explicitly(self):
+        dialog = object.__new__(pinyin_live.HotkeySettingsDialog)
+        button = mock.Mock()
+        entry = mock.Mock()
+        dialog.capture_button = button
+        dialog.capture_entry = entry
+        dialog.capture_state = {
+            'pressed_keys': {'char:x'},
+            'modifiers': {'ctrl'},
+            'trigger': 'p',
+            'listener': None,
+        }
+        dialog.capture_var = SimpleNamespace(set=lambda _value: None)
+        dialog.status_var = SimpleNamespace(set=lambda _value: None)
+        dialog._start_listener = mock.Mock()
+
+        pinyin_live.HotkeySettingsDialog.start_capture(dialog)
+
+        self.assertEqual(dialog.capture_state['pressed_keys'], set())
+        self.assertEqual(dialog.capture_state['modifiers'], set())
+        self.assertIsNone(dialog.capture_state['trigger'])
+        button.configure.assert_called_once_with(state='disabled')
+        entry.configure.assert_called_once_with(state='readonly')
+        dialog._start_listener.assert_called_once_with()
+
     def test_format_hotkey_normalizes_modifiers(self):
         self.assertEqual(
             pinyin_live.format_hotkey({'shift', 'ctrl'}, 'P'),
@@ -300,6 +340,43 @@ class TestHotkeyCaptureFormatting(unittest.TestCase):
 
         self.assertEqual(dialog.capture_state['modifiers'], set())
         self.assertEqual(dialog.capture_state['trigger'], 'p')
+
+    def test_dialog_stops_capture_after_completed_chord(self):
+        dialog = object.__new__(pinyin_live.HotkeySettingsDialog)
+        dialog.capture_state = {
+            'pressed_keys': {'char:p'},
+            'modifiers': {'ctrl'},
+            'trigger': 'p',
+            'listener': None,
+        }
+        dialog._schedule_ui = lambda callback: callback()
+        dialog._stop_listener = mock.Mock()
+
+        pinyin_live.HotkeySettingsDialog.on_capture_release(dialog, SimpleNamespace(char='p', name='p', vk=80))
+
+        dialog._stop_listener.assert_called_once_with()
+
+    def test_dialog_stop_listener_disables_capture_entry(self):
+        listener = mock.Mock()
+        button = mock.Mock()
+        entry = mock.Mock()
+        dialog = object.__new__(pinyin_live.HotkeySettingsDialog)
+        dialog.capture_button = button
+        dialog.capture_entry = entry
+        dialog.capture_state = {
+            'pressed_keys': {'char:p'},
+            'modifiers': {'ctrl'},
+            'trigger': 'p',
+            'listener': listener,
+        }
+
+        pinyin_live.HotkeySettingsDialog._stop_listener(dialog)
+
+        listener.stop.assert_called_once_with()
+        self.assertIsNone(dialog.capture_state['listener'])
+        self.assertEqual(dialog.capture_state['pressed_keys'], set())
+        entry.configure.assert_called_once_with(state='disabled')
+        button.configure.assert_called_once_with(state='normal')
 
     def test_dialog_captures_multi_key_chord_and_resets_between_sequences(self):
         dialog = object.__new__(pinyin_live.HotkeySettingsDialog)

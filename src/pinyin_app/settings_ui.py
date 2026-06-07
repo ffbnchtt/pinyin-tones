@@ -45,6 +45,8 @@ class HotkeySettingsDialog:
             'trigger': None,
             'listener': None,
         }
+        self.capture_button = None
+        self.capture_entry = None
         self.capture_var = tk.StringVar(value=app.hotkey)
         self.status_var = tk.StringVar(value='')
         self.autostart_var = tk.BooleanVar(value=bool(app.config.get('autostart', startup_enabled_default)))
@@ -54,7 +56,6 @@ class HotkeySettingsDialog:
         getattr(self, 'logger', logging.getLogger('pinyin_app')).info('Hotkey settings dialog opening')
         try:
             self._build_window()
-            self._start_listener()
             self.root.mainloop()
         finally:
             self._stop_listener()
@@ -94,15 +95,24 @@ class HotkeySettingsDialog:
         self.root.rowconfigure(0, weight=1)
 
         ttk.Label(container, text='Atajo global').grid(row=0, column=0, sticky='w')
+        hotkey_row = ttk.Frame(container)
+        hotkey_row.grid(row=1, column=0, sticky='ew', pady=(2, 6))
+        hotkey_row.columnconfigure(0, weight=1)
         entry = ttk.Entry(
-            container,
+            hotkey_row,
             textvariable=self.capture_var,
-            width=30,
+            width=24,
             justify='left',
-            state='readonly',
+            state='disabled',
         )
-        entry.grid(row=1, column=0, sticky='ew', pady=(2, 6))
-        entry.focus_set()
+        self.capture_entry = entry
+        entry.grid(row=0, column=0, sticky='ew')
+        self.capture_button = ttk.Button(
+            hotkey_row,
+            text='Editar',
+            command=self.start_capture,
+        )
+        self.capture_button.grid(row=0, column=1, padx=(6, 0))
 
         ttk.Label(
             container,
@@ -134,6 +144,8 @@ class HotkeySettingsDialog:
         self.root.protocol('WM_DELETE_WINDOW', self.cancel)
 
     def _start_listener(self) -> None:
+        if self.capture_state.get('listener') is not None:
+            return
         self.capture_state['listener'] = keyboard.Listener(
             on_press=self.on_capture_press,
             on_release=self.on_capture_release,
@@ -147,6 +159,15 @@ class HotkeySettingsDialog:
         if listener is not None:
             try:
                 listener.stop()
+            except Exception:
+                pass
+        self.capture_state['listener'] = None
+        self.capture_state['pressed_keys'].clear()
+        self._set_capture_entry_state(False)
+        button = getattr(self, 'capture_button', None)
+        if button is not None:
+            try:
+                button.configure(state='normal')
             except Exception:
                 pass
 
@@ -168,8 +189,31 @@ class HotkeySettingsDialog:
 
     def begin_capture(self) -> None:
         """Reset capture state before starting a chord."""
+        self.capture_state['pressed_keys'].clear()
         self.capture_state['modifiers'].clear()
         self.capture_state['trigger'] = None
+
+    def _set_capture_entry_state(self, capturing: bool) -> None:
+        entry = getattr(self, 'capture_entry', None)
+        if entry is None:
+            return
+        try:
+            entry.configure(state='readonly' if capturing else 'disabled')
+        except Exception:
+            pass
+
+    def start_capture(self) -> None:
+        """Enable global capture for the next hotkey chord."""
+        self.begin_capture()
+        self._set_capture_entry_state(True)
+        self.refresh_preview()
+        button = getattr(self, 'capture_button', None)
+        if button is not None:
+            try:
+                button.configure(state='disabled')
+            except Exception:
+                pass
+        self._start_listener()
 
     def _capture_started(self) -> bool:
         return bool(self.capture_state['pressed_keys'])
@@ -265,6 +309,8 @@ class HotkeySettingsDialog:
     def on_capture_release(self, key):
         """Handle a key release during capture."""
         self.capture_state['pressed_keys'].discard(self._capture_key_identity(key))
+        if not self.capture_state['pressed_keys'] and self.capture_state['trigger']:
+            self._schedule_ui(self._stop_listener)
         return True
 
 
