@@ -43,19 +43,19 @@ Compilación directa con PyInstaller (ejemplos):
 Windows:
 
 ```cmd
-pyinstaller --onefile --noconsole --name pinyin_app --paths src --hidden-import pinyin_app.pinyin_converter src/pinyin_app/pinyin_live.py
+pyinstaller --onefile --noconsole --name pinyin_tones --paths src --hidden-import pinyin_app.pinyin_converter src/pinyin_app/pinyin_live.py
 ```
 
 macOS:
 
 ```bash
-pyinstaller --onefile --windowed --name pinyin_app --paths src --hidden-import pinyin_app.pinyin_converter src/pinyin_app/pinyin_live.py
+pyinstaller --onefile --windowed --name pinyin_tones --paths src --hidden-import pinyin_app.pinyin_converter src/pinyin_app/pinyin_live.py
 ```
 
 Linux:
 
 ```bash
-pyinstaller --onefile --noconsole --name pinyin_app --paths src --hidden-import pinyin_app.pinyin_converter src/pinyin_app/pinyin_live.py
+pyinstaller --onefile --noconsole --name pinyin_tones --paths src --hidden-import pinyin_app.pinyin_converter src/pinyin_app/pinyin_live.py
 ```
 
 Permisos especiales:

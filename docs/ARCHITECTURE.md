@@ -13,7 +13,7 @@
 - Diálogo de configuración: captura el atajo directo desde las teclas presionadas y lo guarda en `config.json`.
 - El diálogo usa una vista previa de solo lectura y botones alineados para una experiencia sencilla.
 - La opción "Iniciar con el sistema" escribe la entrada nativa correspondiente en Windows, macOS o Linux.
-- Estado escribible: `config.json`, `pinyin_app.log` y descargas de actualización se guardan junto al ejecutable/proyecto cuando esa carpeta permite escritura; si no, se usa la carpeta de datos del usuario.
+- Estado escribible: `config.json`, `pinyin_tones.log` y descargas de actualización se guardan junto al ejecutable/proyecto cuando esa carpeta permite escritura; si no, se usa la carpeta de datos del usuario.
 - Salir desde la bandeja envía la señal para terminar el bucle principal de forma ordenada.
 
 ## Objetivos de diseño

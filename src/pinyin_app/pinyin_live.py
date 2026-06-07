@@ -193,7 +193,7 @@ except ImportError:  # pragma: no cover - script execution fallback
 ROOT_DIR = get_app_root()
 STATE_DIR = get_state_dir(ROOT_DIR)
 CONFIG_PATH = os.path.join(STATE_DIR, "config.json")
-LOG_PATH = os.path.join(STATE_DIR, "pinyin_app.log")
+LOG_PATH = os.path.join(STATE_DIR, "pinyin_tones.log")
 DOWNLOAD_DIR = os.path.join(STATE_DIR, "downloads")
 
 # Logger
