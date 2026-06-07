@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pinyin Windows Trust"
+  short_description: "Validate Windows signing and trust"
+  default_prompt: "Use $pinyin-windows-trust to validate Windows code signing, SmartScreen risk, and release trust readiness."

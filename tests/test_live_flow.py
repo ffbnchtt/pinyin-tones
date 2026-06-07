@@ -635,6 +635,28 @@ class TestUpdateController(unittest.TestCase):
         self.assertTrue(app._should_prompt_for_update(state))
         self.assertTrue(app._should_prompt_for_update(state, force_prompt=True))
 
+    def test_should_not_prompt_for_up_to_date_release_with_asset(self):
+        app = object.__new__(pinyin_live.PinyinApp)
+        app.config = dict(pinyin_live.DEFAULT_CONFIG)
+        app.update_lock = pinyin_live.threading.Lock()
+        app.update_state = UpdateState(
+            status="up_to_date",
+            latest_release=ReleaseInfo(
+                version="1.0.0",
+                tag="v1.0.0",
+                html_url="https://example/release",
+                asset_name="pinyin-tones-windows.zip",
+                asset_url="https://example/file.zip",
+                published_at=None,
+            ),
+        )
+
+        self.assertFalse(app._should_prompt_for_update(app.update_state))
+        self.assertFalse(app._can_download_update())
+        self.assertFalse(app._should_show_update_menu())
+        self.assertEqual(app._update_status_label(), "Actualizado")
+        self.assertEqual(app._update_menu_label(), "Actualizado")
+
     def test_can_download_update_when_release_asset_exists(self):
         app = object.__new__(pinyin_live.PinyinApp)
         app.update_lock = pinyin_live.threading.Lock()

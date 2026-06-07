@@ -506,8 +506,7 @@ class PinyinApp:
     def _should_prompt_for_update(
         self, state: UpdateState, force_prompt: bool = False
     ) -> bool:
-        release = state.latest_release
-        return release is not None
+        return state.status == "available" and state.latest_release is not None
 
     def request_update_check(self, force: bool = False) -> None:
         """Start a background update check."""
@@ -559,9 +558,9 @@ class PinyinApp:
         state = self._get_update_state()
         if state.status == "checking":
             return "Buscando actualizaciones..."
-        if state.latest_release and state.downloaded_path:
+        if state.status == "available" and state.latest_release and state.downloaded_path:
             return f"Actualización descargada: v{state.latest_release.version}"
-        if state.latest_release:
+        if state.status == "available" and state.latest_release:
             return f"Nueva versión disponible: v{state.latest_release.version}"
         if state.status == "up_to_date":
             return "Actualizado"
@@ -576,9 +575,9 @@ class PinyinApp:
         state = self._get_update_state()
         if state.status == "checking":
             return "Buscando actualizaciones..."
-        if state.latest_release and state.downloaded_path:
+        if state.status == "available" and state.latest_release and state.downloaded_path:
             return f"Actualización descargada (v{state.latest_release.version})"
-        if state.latest_release:
+        if state.status == "available" and state.latest_release:
             return f"Actualización disponible (v{state.latest_release.version})"
         if state.status in {"idle", "up_to_date"}:
             return "Actualizado"
@@ -592,6 +591,8 @@ class PinyinApp:
 
     def _can_download_update(self, _item=None) -> bool:
         state = self._get_update_state()
+        if state.status != "available":
+            return False
         release = state.latest_release
         if release is None or not release.asset_name:
             return False

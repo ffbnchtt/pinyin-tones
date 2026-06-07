@@ -41,6 +41,13 @@ Use the smallest applicable agent/skill for the request.
 - Use for: package builds, PyInstaller flags, release asset names, version comparisons, GitHub release checks, downloads, and update dialogs.
 - Keep release asset names stable unless the user explicitly changes the release contract.
 
+### Pinyin Windows Trust Agent
+
+- Skill: `.codex/skills/pinyin-windows-trust`
+- Owns: Windows signing/trust validation guidance, Authenticode/SignTool checks, certificate and timestamp requirements, SmartScreen/Defender warning risk, and docs/tests for Windows release trust readiness.
+- Use for: Windows code signing, certificate choices, signing command validation, SmartScreen reputation, antivirus false-positive mitigation, and release security warnings.
+- Do not commit signing secrets, certificates, private keys, PFX files, or token credentials.
+
 ### Pinyin QA Docs Agent
 
 - Skill: `.codex/skills/pinyin-qa-docs`

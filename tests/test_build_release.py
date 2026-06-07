@@ -89,6 +89,32 @@ class TestBuildReleaseHelpers(unittest.TestCase):
             self.assertTrue((release_dir / 'pinyin_tones.png').exists())
             self.assertTrue((release_dir / 'pinyin_tones.ico').exists())
 
+    def test_remove_standalone_artifact_deletes_dist_file_after_payload_copy(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            artifact_path = temp_path / 'pinyin_tones.exe'
+            artifact_path.write_text('binary', encoding='utf-8')
+            release_dir = temp_path / 'pinyin_tones_release' / 'windows'
+            release_dir.mkdir(parents=True)
+
+            with mock.patch.object(build_release, 'DIST_DIR', temp_path):
+                build_release.remove_standalone_artifact(artifact_path, release_dir)
+
+            self.assertFalse(artifact_path.exists())
+
+    def test_remove_standalone_artifact_keeps_release_payload_file(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            release_dir = temp_path / 'pinyin_tones_release' / 'windows'
+            release_dir.mkdir(parents=True)
+            artifact_path = release_dir / 'pinyin_tones.exe'
+            artifact_path.write_text('binary', encoding='utf-8')
+
+            with mock.patch.object(build_release, 'DIST_DIR', temp_path):
+                build_release.remove_standalone_artifact(artifact_path, release_dir)
+
+            self.assertTrue(artifact_path.exists())
+
 
 if __name__ == '__main__':
     unittest.main()

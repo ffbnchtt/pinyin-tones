@@ -206,6 +206,25 @@ def copy_release_payload(platform_name: str, artifact_path: Path, icon_assets: d
     return platform_release_dir
 
 
+def remove_standalone_artifact(artifact_path: Path, release_dir: Path) -> None:
+    """Remove the raw PyInstaller artifact after copying it into the release payload."""
+    resolved_artifact = artifact_path.resolve()
+    resolved_dist = DIST_DIR.resolve()
+    resolved_release = release_dir.resolve()
+
+    if resolved_artifact == resolved_release or resolved_release in resolved_artifact.parents:
+        return
+    if resolved_dist not in resolved_artifact.parents:
+        return
+    if not artifact_path.exists():
+        return
+
+    if artifact_path.is_dir():
+        shutil.rmtree(artifact_path)
+    else:
+        artifact_path.unlink()
+
+
 def build_pyinstaller_env(platform_name: str) -> dict[str, str]:
     env = os.environ.copy()
     if platform_name != 'windows':
@@ -230,6 +249,7 @@ def build(platform_name: str) -> Path:
     run_pyinstaller(command, platform_name)
     artifact_path = find_artifact_path(platform_name)
     release_dir = copy_release_payload(platform_name, artifact_path, icon_assets)
+    remove_standalone_artifact(artifact_path, release_dir)
     return release_dir
 
 

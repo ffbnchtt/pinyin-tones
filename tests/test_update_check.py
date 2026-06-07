@@ -167,6 +167,21 @@ class TestUpdateCheckHelpers(unittest.TestCase):
             state = update_check.check_for_updates("0.1.0")
         self.assertEqual(state.status, "up_to_date")
 
+    def test_check_for_updates_treats_v_prefixed_equal_version_as_up_to_date(self):
+        release = update_check.ReleaseInfo(
+            version="1.0.0",
+            tag="v1.0.0",
+            html_url="https://example/release",
+            asset_name="pinyin-tones-windows.zip",
+            asset_url="https://example/windows.zip",
+            published_at=None,
+        )
+        with mock.patch.object(update_check, "fetch_latest_release", return_value=release):
+            state = update_check.check_for_updates("1.0.0")
+
+        self.assertEqual(state.status, "up_to_date")
+        self.assertEqual(state.latest_release.version, "1.0.0")
+
     def test_check_for_updates_handles_fetch_error(self):
         with mock.patch.object(update_check, "fetch_latest_release", side_effect=RuntimeError("boom")):
             state = update_check.check_for_updates("0.1.0")
