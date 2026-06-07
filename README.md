@@ -72,7 +72,7 @@ Si la app parece iniciarse pero no detecta teclas o no reemplaza texto, revisá 
 
 ## Configuración
 
-La configuración se guarda en [`config.json`](config.json), junto al ejecutable o en la raíz del proyecto cuando corrés desde fuente. Desde la interfaz de configuración podés:
+La configuración se guarda en `config.json`. La app intenta usar la carpeta del ejecutable o la raíz del proyecto cuando corrés desde fuente; si esa ubicación no es escribible, usa una carpeta de datos del usuario (`%LOCALAPPDATA%\Pinyin Tones` en Windows, `~/Library/Application Support/Pinyin Tones` en macOS o `~/.config/Pinyin Tones` en Linux). Desde la interfaz de configuración podés:
 
 - Cambiar el atajo global.
 - Activar/desactivar el inicio automático con el sistema.

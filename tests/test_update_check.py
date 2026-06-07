@@ -28,6 +28,17 @@ class FakeResponse:
         return False
 
 
+class FailingResponse:
+    def read(self, size: int = -1) -> bytes:
+        raise OSError("download interrupted")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+
 class TestVersionHelpers(unittest.TestCase):
     def test_parse_version_accepts_optional_v_prefix(self):
         self.assertEqual(parse_version("0.1.0"), (0, 1, 0))
@@ -180,3 +191,45 @@ class TestUpdateCheckHelpers(unittest.TestCase):
                 path = update_check.download_release_asset(release, temp_dir)
             self.assertTrue(Path(path).exists())
             self.assertEqual(Path(path).read_bytes(), b"zip-content")
+            self.assertFalse(Path(f"{path}.part").exists())
+
+    def test_ensure_download_dir_uses_exact_directory(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            downloads = Path(temp_dir) / "state" / "downloads"
+
+            self.assertEqual(update_check.ensure_download_dir(str(downloads)), str(downloads))
+            self.assertTrue(downloads.exists())
+
+    def test_download_release_asset_rejects_path_separator_in_asset_name(self):
+        release = update_check.ReleaseInfo(
+            version="0.2.0",
+            tag="v0.2.0",
+            html_url="https://example/release",
+            asset_name="../pinyin-tones-windows.zip",
+            asset_url="https://example/windows.zip",
+            published_at=None,
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with self.assertRaises(ValueError):
+                update_check.download_release_asset(release, temp_dir)
+
+    def test_download_release_asset_removes_partial_file_on_failure(self):
+        release = update_check.ReleaseInfo(
+            version="0.2.0",
+            tag="v0.2.0",
+            html_url="https://example/release",
+            asset_name="pinyin-tones-windows.zip",
+            asset_url="https://example/windows.zip",
+            published_at=None,
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with mock.patch.object(
+                update_check.urllib.request,
+                "urlopen",
+                return_value=FailingResponse(),
+            ):
+                with self.assertRaises(OSError):
+                    update_check.download_release_asset(release, temp_dir)
+
+            self.assertFalse((Path(temp_dir) / "pinyin-tones-windows.zip").exists())
+            self.assertFalse((Path(temp_dir) / "pinyin-tones-windows.zip.part").exists())

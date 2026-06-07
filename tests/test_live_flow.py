@@ -450,6 +450,67 @@ class TestSingleInstanceGuard(unittest.TestCase):
         fake_run.assert_called_once_with()
 
 
+class TestStartupFailureHandling(unittest.TestCase):
+    def setUp(self):
+        pinyin_live.STOP_REQUESTED.clear()
+
+    def tearDown(self):
+        pinyin_live.STOP_REQUESTED.clear()
+        mock.patch.stopall()
+
+    def test_start_stops_started_listener_when_later_listener_fails(self):
+        class FakeListener:
+            def __init__(self, fail=False):
+                self.fail = fail
+                self.started = False
+                self.stopped = False
+
+            def start(self):
+                if self.fail:
+                    raise RuntimeError("listener unavailable")
+                self.started = True
+
+            def stop(self):
+                self.stopped = True
+
+        app = object.__new__(pinyin_live.PinyinApp)
+        app.autostart_enabled = False
+        app.autostart_config = pinyin_live.build_autostart_config()
+        app.type_listener = FakeListener()
+        app.toggle_listener = FakeListener(fail=True)
+        app.icon = None
+        app.request_update_check = mock.Mock()
+
+        with self.assertRaises(RuntimeError):
+            pinyin_live.PinyinApp.start(app)
+
+        self.assertTrue(app.type_listener.started)
+        self.assertTrue(app.type_listener.stopped)
+        self.assertTrue(app.toggle_listener.stopped)
+        app.request_update_check.assert_not_called()
+
+    def test_tray_failure_requests_shutdown(self):
+        app = object.__new__(pinyin_live.PinyinApp)
+        app._run_tray = mock.Mock(side_effect=RuntimeError("tray unavailable"))
+
+        pinyin_live.PinyinApp._run_tray_safe(app)
+
+        self.assertTrue(pinyin_live.STOP_REQUESTED.is_set())
+
+    def test_run_main_loop_shows_startup_error_when_start_fails(self):
+        app = mock.Mock()
+        app.hotkey = pinyin_live.DEFAULT_HOTKEY
+        app.hotkey_modifiers, app.hotkey_trigger = pinyin_live.parse_hotkey(app.hotkey)
+        app.start.side_effect = RuntimeError("listener unavailable")
+
+        with mock.patch.object(pinyin_live, "PinyinApp", return_value=app), \
+             mock.patch.object(pinyin_live, "show_startup_error") as fake_error:
+            pinyin_live._run_main_loop()
+
+        fake_error.assert_called_once()
+        app.stop.assert_not_called()
+
+
 class TestUpdateController(unittest.TestCase):
     def test_apply_available_update_requests_dialog_and_refreshes_menu(self):
         app = object.__new__(pinyin_live.PinyinApp)

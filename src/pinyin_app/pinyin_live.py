@@ -47,6 +47,7 @@ try:
     from pinyin_app.update_dialog import run_update_dialog
     from pinyin_app.update_check import ReleaseInfo, UpdateState
     from pinyin_app.version import __version__
+    from pinyin_app.paths import get_app_root, get_state_dir
     from pinyin_app import update_check as _update_check
     from pinyin_app import clipboard as _clipboard
     from pinyin_app import buffer as _buffer
@@ -184,22 +185,28 @@ except ImportError:  # pragma: no cover - script execution fallback
     from update_dialog import run_update_dialog
     from update_check import ReleaseInfo, UpdateState
     from version import __version__
+    from paths import get_app_root, get_state_dir
     import update_check as _update_check
 
 
 # Paths
-ROOT_DIR = os.path.abspath(os.path.join(SRC_DIR, os.pardir))
-CONFIG_PATH = os.path.join(ROOT_DIR, "config.json")
-LOG_PATH = os.path.join(ROOT_DIR, "pinyin_app.log")
+ROOT_DIR = get_app_root()
+STATE_DIR = get_state_dir(ROOT_DIR)
+CONFIG_PATH = os.path.join(STATE_DIR, "config.json")
+LOG_PATH = os.path.join(STATE_DIR, "pinyin_app.log")
+DOWNLOAD_DIR = os.path.join(STATE_DIR, "downloads")
 
 # Logger
 logger = logging.getLogger("pinyin_app")
 logger.setLevel(logging.INFO)
-fh = logging.FileHandler(LOG_PATH, encoding="utf-8")
 fmt = logging.Formatter("%(asctime)s %(levelname)s: %(message)s")
-fh.setFormatter(fmt)
 if not logger.handlers:
-    logger.addHandler(fh)
+    try:
+        fh = logging.FileHandler(LOG_PATH, encoding="utf-8")
+        fh.setFormatter(fmt)
+        logger.addHandler(fh)
+    except OSError:
+        pass
     stream_handler = logging.StreamHandler()
     stream_handler.setFormatter(fmt)
     logger.addHandler(stream_handler)
@@ -426,16 +433,21 @@ class PinyinApp:
 
     def start(self):
         """Start listeners and tray icon."""
-        if self.autostart_enabled:
-            sync_autostart_setting(True, self.autostart_config)
-        if self.type_listener:
-            logger.info("Starting typing listener")
-            self.type_listener.start()
-        if self.toggle_listener:
-            logger.info("Starting hotkey listener")
-            self.toggle_listener.start()
-        self.request_update_check()
-        threading.Thread(target=self._run_tray, daemon=True).start()
+        try:
+            if self.autostart_enabled:
+                sync_autostart_setting(True, self.autostart_config)
+            if self.type_listener:
+                logger.info("Starting typing listener")
+                self.type_listener.start()
+            if self.toggle_listener:
+                logger.info("Starting hotkey listener")
+                self.toggle_listener.start()
+            self.request_update_check()
+            threading.Thread(target=self._run_tray_safe, daemon=True).start()
+        except Exception:
+            logger.exception("Failed to start application listeners")
+            self.stop()
+            raise
 
     def stop(self):
         """Stop listeners and tray icon."""
@@ -464,7 +476,7 @@ class PinyinApp:
         save_config(CONFIG_PATH, self.config)
 
     def _downloads_dir(self) -> str:
-        return _update_check.ensure_download_dir(ROOT_DIR)
+        return _update_check.ensure_download_dir(DOWNLOAD_DIR)
 
     def _prune_downloaded_update_state(self) -> None:
         downloaded_version = self.config.get("downloaded_update_version")
@@ -800,6 +812,14 @@ class PinyinApp:
         if self.icon:
             self.icon.run()
 
+    def _run_tray_safe(self):
+        """Run the tray loop and stop the app if tray initialization fails."""
+        try:
+            self._run_tray()
+        except Exception:
+            logger.exception("System tray failed")
+            STOP_REQUESTED.set()
+
 
 def quit_app(app: PinyinApp):
     """Stop the app and signal the main loop to exit."""
@@ -840,6 +860,19 @@ def run_update_dialog_for_app(app: PinyinApp) -> None:
         CONFIG_DIALOG_OPEN.clear()
 
 
+def show_startup_error(exc: Exception) -> None:
+    """Show a startup error when GUI dialogs are available."""
+    try:
+        messagebox.showerror(
+            APP_NAME,
+            "No se pudo iniciar Pinyin Tones.\n\n"
+            "Revisá permisos de teclado/accesibilidad o reiniciá la aplicación.\n\n"
+            f"Detalle: {exc}",
+        )
+    except Exception:
+        pass
+
+
 def main():
     """Entry point for the desktop app."""
     with SingleInstanceLock(get_single_instance_lock_path()) as instance_lock:
@@ -857,7 +890,11 @@ def _run_main_loop():
     logger.info(
         f"App starting with hotkey={app.hotkey!r}, modifiers={sorted(app.hotkey_modifiers)}, trigger={app.hotkey_trigger!r}"
     )
-    app.start()
+    try:
+        app.start()
+    except Exception as exc:
+        show_startup_error(exc)
+        return
     try:
         while not STOP_REQUESTED.is_set():
             if SETTINGS_REQUESTED.is_set() and not CONFIG_DIALOG_OPEN.is_set():
@@ -877,6 +914,8 @@ def _run_main_loop():
         print("\nSaliendo...")
         app.stop()
         sys.exit(0)
+    finally:
+        app.stop()
 
 
 if __name__ == "__main__":

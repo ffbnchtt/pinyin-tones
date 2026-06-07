@@ -216,11 +216,10 @@ def check_for_updates(
     )
 
 
-def ensure_download_dir(base_dir: str) -> str:
+def ensure_download_dir(download_dir: str) -> str:
     """Create the update download directory if needed."""
-    path = os.path.join(base_dir, "downloads")
-    os.makedirs(path, exist_ok=True)
-    return path
+    os.makedirs(download_dir, exist_ok=True)
+    return download_dir
 
 
 def download_release_asset(release: ReleaseInfo, download_dir: str, timeout: float = 30.0) -> str:
@@ -228,10 +227,22 @@ def download_release_asset(release: ReleaseInfo, download_dir: str, timeout: flo
     if not release.asset_name or not release.asset_url:
         raise ValueError("Release does not include a compatible downloadable asset")
     os.makedirs(download_dir, exist_ok=True)
-    destination = os.path.join(download_dir, release.asset_name)
+    asset_name = os.path.basename(release.asset_name)
+    if asset_name != release.asset_name:
+        raise ValueError("Release asset name must not include path separators")
+    destination = os.path.join(download_dir, asset_name)
+    partial_destination = f"{destination}.part"
     request = build_request(release.asset_url)
-    with urllib.request.urlopen(request, timeout=timeout) as response, open(destination, "wb") as handle:
-        shutil.copyfileobj(response, handle)
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response, open(partial_destination, "wb") as handle:
+            shutil.copyfileobj(response, handle)
+        os.replace(partial_destination, destination)
+    except Exception:
+        try:
+            os.remove(partial_destination)
+        except OSError:
+            pass
+        raise
     return destination
 
 

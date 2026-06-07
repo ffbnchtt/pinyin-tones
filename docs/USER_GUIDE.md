@@ -4,13 +4,13 @@
 
 Pinyin Tones escucha lo que escribís y convierte tokens como `ni3` o `hao3` en Pinyin con marcas de tono en tiempo real.
 
-Esta aplicación es portable: no se instala nada en el sistema. Todo queda en la carpeta donde la ejecutás.
+Esta aplicación es portable: no requiere instalación. La app intenta guardar configuración, logs y descargas de actualizaciones en la carpeta donde la ejecutás; si esa carpeta no es escribible, usa una carpeta de datos del usuario.
 
 ## Uso básico
 
 1. Iniciá la aplicación.
 2. Usá el atajo o el ícono en la bandeja del sistema para activarla o desactivarla.
-3. Escribí un token de Pinyin seguido por un número de tono (1-5).
+3. Escribí un token de Pinyin seguido por un número de tono (1-4).
 4. La aplicación reemplaza el token con la versión con marca de tono.
 
 ## Configuración
@@ -19,6 +19,8 @@ Abrí la ventana de configuración desde el ícono de la bandeja para cambiar:
 
 - el atajo global
 - si la aplicación inicia con el sistema operativo
+
+La configuración se guarda en `config.json`. En Windows, si la carpeta del ejecutable no permite escritura, la ruta alternativa es `%LOCALAPPDATA%\Pinyin Tones`.
 
 ## Atajos recomendados
 
@@ -36,6 +38,7 @@ Evitá atajos que ya estén en uso por el sistema operativo u otras aplicaciones
 - Si la app no reemplaza el texto, aseguráte de que está activa desde el menú de la bandeja.
 - Si la opción de inicio automático falla, abrí nuevamente la ventana de configuración e intentá de nuevo.
 - Si no aparece el ícono en la bandeja, reiniciá la aplicación.
+- Si ejecutás la app desde una carpeta protegida o sincronizada y no guarda cambios, movela a una carpeta escribible o revisá la carpeta de datos del usuario.
 
 ## Cómo desinstalar
 
