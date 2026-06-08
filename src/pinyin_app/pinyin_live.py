@@ -198,16 +198,19 @@ DOWNLOAD_DIR = os.path.join(STATE_DIR, "downloads")
 
 # Logger
 logger = logging.getLogger("pinyin_app")
-logger.setLevel(logging.INFO)
+PRODUCTION_LOG_LEVEL = logging.ERROR
+logger.setLevel(PRODUCTION_LOG_LEVEL)
 fmt = logging.Formatter("%(asctime)s %(levelname)s: %(message)s")
 if not logger.handlers:
     try:
         fh = logging.FileHandler(LOG_PATH, encoding="utf-8")
+        fh.setLevel(PRODUCTION_LOG_LEVEL)
         fh.setFormatter(fmt)
         logger.addHandler(fh)
     except OSError:
         pass
     stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(PRODUCTION_LOG_LEVEL)
     stream_handler.setFormatter(fmt)
     logger.addHandler(stream_handler)
 
@@ -878,14 +881,16 @@ def main():
     """Entry point for the desktop app."""
     with SingleInstanceLock(get_single_instance_lock_path()) as instance_lock:
         if instance_lock is None:
-            logger.info("Another %s instance is already running; exiting", APP_NAME)
+            message = f"Another {APP_NAME} instance is already running; exiting"
+            logger.info(message)
+            print(message, file=sys.stderr)
             return
         _run_main_loop()
 
 
 def _run_main_loop():
     """Run the desktop app after the single-instance guard is held."""
-    print("App de Pinyin en vivo")
+    print("Pinyin Tones - Running")
     print("Usá el ícono en la bandeja para ver el estado y modificar atajo")
     app = PinyinApp()
     logger.info(

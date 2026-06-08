@@ -115,6 +115,75 @@ class TestBuildReleaseHelpers(unittest.TestCase):
 
             self.assertTrue(artifact_path.exists())
 
+    def test_build_signing_command_is_disabled_without_certificate_config(self):
+        command = build_release.build_signing_command(Path('pinyin_tones.exe'), {})
+
+        self.assertIsNone(command)
+
+    def test_build_signing_command_uses_certificate_thumbprint(self):
+        command = build_release.build_signing_command(
+            Path('pinyin_tones.exe'),
+            {
+                'PINYIN_SIGNTOOL_PATH': 'C:/Windows Kits/signtool.exe',
+                'PINYIN_SIGN_CERT_SHA1': 'ABC123',
+                'PINYIN_SIGN_TIMESTAMP_URL': 'https://timestamp.example.test',
+            },
+        )
+
+        self.assertEqual(command[0], 'C:/Windows Kits/signtool.exe')
+        self.assertIn('/fd', command)
+        self.assertIn('SHA256', command)
+        self.assertIn('/tr', command)
+        self.assertIn('https://timestamp.example.test', command)
+        self.assertIn('/td', command)
+        self.assertIn('/sha1', command)
+        self.assertIn('ABC123', command)
+        self.assertEqual(command[-1], 'pinyin_tones.exe')
+
+    def test_build_signing_command_uses_pfx_file_and_password(self):
+        command = build_release.build_signing_command(
+            Path('pinyin_tones.exe'),
+            {
+                'PINYIN_SIGN_CERT_FILE': 'C:/certs/pinyin.pfx',
+                'PINYIN_SIGN_CERT_PASSWORD': 'secret',
+            },
+        )
+
+        self.assertIn('/f', command)
+        self.assertIn('C:/certs/pinyin.pfx', command)
+        self.assertIn('/p', command)
+        self.assertIn('secret', command)
+
+    def test_build_signing_command_rejects_conflicting_certificate_config(self):
+        with self.assertRaises(ValueError):
+            build_release.build_signing_command(
+                Path('pinyin_tones.exe'),
+                {
+                    'PINYIN_SIGN_CERT_SHA1': 'ABC123',
+                    'PINYIN_SIGN_CERT_FILE': 'C:/certs/pinyin.pfx',
+                },
+            )
+
+    def test_sign_windows_artifact_runs_signtool_when_configured(self):
+        with mock.patch.object(build_release.subprocess, 'run') as fake_run:
+            build_release.sign_windows_artifact(
+                Path('pinyin_tones.exe'),
+                {'PINYIN_SIGN_CERT_SHA1': 'ABC123'},
+            )
+
+        fake_run.assert_called_once()
+        self.assertIn('/sha1', fake_run.call_args.args[0])
+        self.assertTrue(fake_run.call_args.kwargs['check'])
+
+    def test_sign_windows_artifact_skips_non_exe_files(self):
+        with mock.patch.object(build_release.subprocess, 'run') as fake_run:
+            build_release.sign_windows_artifact(
+                Path('pinyin_tones'),
+                {'PINYIN_SIGN_CERT_SHA1': 'ABC123'},
+            )
+
+        fake_run.assert_not_called()
+
 
 if __name__ == '__main__':
     unittest.main()
