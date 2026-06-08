@@ -6,10 +6,10 @@ Instalación en desarrollo:
 
 ```bash
 pip install -e .
-python src/pinyin_app/pinyin_live.py
+python src/pinyin_tones/pinyin_live.py
 
 # Alternativa si querés ejecutar como módulo instalado
-python -m pinyin_app
+python -m pinyin_tones
 ```
 
 Si también vas a compilar ejecutables:
@@ -61,19 +61,19 @@ Compilación directa con PyInstaller (ejemplos):
 Windows:
 
 ```cmd
-pyinstaller --onefile --noconsole --name pinyin_tones --paths src --hidden-import pinyin_app.pinyin_converter src/pinyin_app/pinyin_live.py
+pyinstaller --onefile --noconsole --name pinyin_tones --paths src --hidden-import pinyin_tones.pinyin_converter src/pinyin_tones/pinyin_live.py
 ```
 
 macOS:
 
 ```bash
-pyinstaller --onefile --windowed --name pinyin_tones --paths src --hidden-import pinyin_app.pinyin_converter src/pinyin_app/pinyin_live.py
+pyinstaller --onefile --windowed --name pinyin_tones --paths src --hidden-import pinyin_tones.pinyin_converter src/pinyin_tones/pinyin_live.py
 ```
 
 Linux:
 
 ```bash
-pyinstaller --onefile --noconsole --name pinyin_tones --paths src --hidden-import pinyin_app.pinyin_converter src/pinyin_app/pinyin_live.py
+pyinstaller --onefile --noconsole --name pinyin_tones --paths src --hidden-import pinyin_tones.pinyin_converter src/pinyin_tones/pinyin_live.py
 ```
 
 Permisos especiales:

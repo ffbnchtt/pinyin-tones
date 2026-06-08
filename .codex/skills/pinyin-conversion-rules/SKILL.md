@@ -1,13 +1,13 @@
 ---
 name: pinyin-conversion-rules
-description: Maintain the pure Hanyu Pinyin conversion logic for this project. Use when changing token parsing, tone placement rules, umlaut/v handling, case preservation, neutral tone behavior, or tests around src/pinyin_app/pinyin_converter.py and tests/test_converter.py.
+description: Maintain the pure Hanyu Pinyin conversion logic for this project. Use when changing token parsing, tone placement rules, umlaut/v handling, case preservation, neutral tone behavior, or tests around src/pinyin_tones/pinyin_converter.py and tests/test_converter.py.
 ---
 
 # Pinyin Conversion Rules
 
 ## Workflow
 
-1. Inspect `src/pinyin_app/pinyin_converter.py` and `tests/test_converter.py` before editing.
+1. Inspect `src/pinyin_tones/pinyin_converter.py` and `tests/test_converter.py` before editing.
 2. Keep conversion pure and deterministic: no clipboard, keyboard, UI, logging, config, or platform logic belongs in this area.
 3. Preserve the existing public helpers unless the request explicitly allows a breaking change: `convert_pinyin_token`, `apply_tone`, `get_tone_target_index`, and `has_vowel`.
 4. Add or update focused `unittest` cases for every behavior change.

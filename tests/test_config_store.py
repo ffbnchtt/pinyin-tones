@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from pinyin_app import config_store
+from pinyin_tones import config_store
 
 
 class TestConfigStore(unittest.TestCase):

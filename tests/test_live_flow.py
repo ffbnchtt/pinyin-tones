@@ -4,11 +4,11 @@ import tempfile
 from types import SimpleNamespace
 from unittest import mock
 
-from pinyin_app import pinyin_live
-from pinyin_app import clipboard as clipboard_mod
-from pinyin_app import buffer as buffer_mod
-from pinyin_app import keyboard_output as keyboard_output_mod
-from pinyin_app.update_check import ReleaseInfo, UpdateState
+from pinyin_tones import pinyin_live
+from pinyin_tones import clipboard as clipboard_mod
+from pinyin_tones import buffer as buffer_mod
+from pinyin_tones import keyboard_output as keyboard_output_mod
+from pinyin_tones.update_check import ReleaseInfo, UpdateState
 
 
 class TestProductionLogging(unittest.TestCase):

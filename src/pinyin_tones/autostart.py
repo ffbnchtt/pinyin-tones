@@ -17,7 +17,7 @@ try:
 except ImportError:  # pragma: no cover - non-Windows platforms
     winreg = None
 
-logger = logging.getLogger('pinyin_app')
+logger = logging.getLogger('pinyin_tones')
 
 
 @dataclass(frozen=True)

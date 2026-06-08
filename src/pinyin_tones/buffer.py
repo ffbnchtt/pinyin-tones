@@ -6,11 +6,11 @@ import threading
 import logging
 import time
 
-from pinyin_app.pinyin_converter import convert_pinyin_token
-from pinyin_app.clipboard import paste_text
-from pinyin_app.keyboard_output import press_backspace
+from pinyin_tones.pinyin_converter import convert_pinyin_token
+from pinyin_tones.clipboard import paste_text
+from pinyin_tones.keyboard_output import press_backspace
 
-logger = logging.getLogger("pinyin_app")
+logger = logging.getLogger("pinyin_tones")
 
 BUFFER: list[str] = []
 BUFFER_LOCK = threading.Lock()

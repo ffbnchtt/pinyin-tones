@@ -19,7 +19,7 @@ import platform
 import shlex
 from tkinter import messagebox
 
-# When running `python src/pinyin_app/pinyin_live.py`, ensure the src directory
+# When running `python src/pinyin_tones/pinyin_live.py`, ensure the src directory
 # is on sys.path so package imports resolve correctly.
 SRC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
 if __package__ is None:
@@ -32,9 +32,9 @@ except ImportError:
     pyperclip = None
 
 try:
-    from pinyin_app.autostart import AutostartConfig, sync_autostart_setting
-    from pinyin_app.config_store import load_config, save_config
-    from pinyin_app.hotkeys import (
+    from pinyin_tones.autostart import AutostartConfig, sync_autostart_setting
+    from pinyin_tones.config_store import load_config, save_config
+    from pinyin_tones.hotkeys import (
         format_hotkey,
         format_hotkey_display,
         normalize_capture_key,
@@ -42,16 +42,16 @@ try:
         normalize_trigger_key,
         parse_hotkey,
     )
-    from pinyin_app.settings_ui import HotkeySettingsDialog, run_hotkey_settings_dialog
-    from pinyin_app.tray_ui import create_tray_image
-    from pinyin_app.update_dialog import run_update_dialog
-    from pinyin_app.update_check import ReleaseInfo, UpdateState
-    from pinyin_app.version import __version__
-    from pinyin_app.paths import get_app_root, get_state_dir
-    from pinyin_app import update_check as _update_check
-    from pinyin_app import clipboard as _clipboard
-    from pinyin_app import buffer as _buffer
-    from pinyin_app import autostart as _autostart
+    from pinyin_tones.settings_ui import HotkeySettingsDialog, run_hotkey_settings_dialog
+    from pinyin_tones.tray_ui import create_tray_image
+    from pinyin_tones.update_dialog import run_update_dialog
+    from pinyin_tones.update_check import ReleaseInfo, UpdateState
+    from pinyin_tones.version import __version__
+    from pinyin_tones.paths import get_app_root, get_state_dir
+    from pinyin_tones import update_check as _update_check
+    from pinyin_tones import clipboard as _clipboard
+    from pinyin_tones import buffer as _buffer
+    from pinyin_tones import autostart as _autostart
 
     # Re-export selected functions for backwards compatibility
     paste_text = _clipboard.paste_text
@@ -197,7 +197,7 @@ LOG_PATH = os.path.join(STATE_DIR, "pinyin_tones.log")
 DOWNLOAD_DIR = os.path.join(STATE_DIR, "downloads")
 
 # Logger
-logger = logging.getLogger("pinyin_app")
+logger = logging.getLogger("pinyin_tones")
 PRODUCTION_LOG_LEVEL = logging.ERROR
 logger.setLevel(PRODUCTION_LOG_LEVEL)
 fmt = logging.Formatter("%(asctime)s %(levelname)s: %(message)s")
@@ -242,7 +242,7 @@ WINDOWS_RUN_KEY_PATH = r"Software\Microsoft\Windows\CurrentVersion\Run"
 WINDOWS_RUN_VALUE_NAME = "Pinyin Tones"
 MAC_LAUNCH_AGENT_LABEL = "com.federico.pinyin-tones"
 LINUX_AUTOSTART_FILENAME = "pinyin-tones.desktop"
-SCRIPT_REL_PATH = os.path.join("src", "pinyin_app", "pinyin_live.py")
+SCRIPT_REL_PATH = os.path.join("src", "pinyin_tones", "pinyin_live.py")
 SINGLE_INSTANCE_LOCK_FILENAME = "pinyin-tones.lock"
 
 

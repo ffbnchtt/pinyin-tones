@@ -16,9 +16,9 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
-from pinyin_app.version import is_newer_version, normalize_version
+from pinyin_tones.version import is_newer_version, normalize_version
 
-logger = logging.getLogger("pinyin_app")
+logger = logging.getLogger("pinyin_tones")
 
 DEFAULT_REPO = "ffbnchtt/pinyin-tones"
 DEFAULT_UPDATE_CHECK_INTERVAL_HOURS = 24

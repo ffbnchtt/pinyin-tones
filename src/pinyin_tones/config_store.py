@@ -9,7 +9,7 @@ import tempfile
 from typing import Any, Dict
 
 
-logger = logging.getLogger("pinyin_app")
+logger = logging.getLogger("pinyin_tones")
 
 
 def load_config(config_path: str, defaults: Dict[str, Any]) -> Dict[str, Any]:

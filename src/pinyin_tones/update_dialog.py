@@ -10,8 +10,8 @@ from typing import Any, Callable
 
 from PIL import ImageTk
 
-from pinyin_app.tray_ui import create_tray_image
-from pinyin_app.update_check import ReleaseInfo
+from pinyin_tones.tray_ui import create_tray_image
+from pinyin_tones.update_check import ReleaseInfo
 
 
 class UpdateAvailableDialog:
@@ -29,7 +29,7 @@ class UpdateAvailableDialog:
         self.app = app
         self.current_version = current_version
         self.release = release
-        self.logger = logger or logging.getLogger("pinyin_app")
+        self.logger = logger or logging.getLogger("pinyin_tones")
         self.on_download = on_download
         self.on_remind_later = on_remind_later
         self.root = tk.Tk()

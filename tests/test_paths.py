@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from pinyin_app import paths
+from pinyin_tones import paths
 
 
 class TestRuntimePaths(unittest.TestCase):

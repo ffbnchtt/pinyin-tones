@@ -24,7 +24,7 @@ Dinos qué esperabas que pasara.
 
 - Sistema operativo: e.g. Windows 10, macOS 12, Ubuntu 22.04
 - Versión de la app: (si aplicable)
-- Archivo `src/pinyin_app/config.json` (si modificaste configuración)
+- Archivo `src/pinyin_tones/config.json` (si modificaste configuración)
 - Logs o mensajes de error (si hay)
 
 Adjuntá capturas o ejemplos de texto que ayuden a reproducir el bug.
