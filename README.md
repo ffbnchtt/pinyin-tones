@@ -4,7 +4,7 @@
 ![Release](https://img.shields.io/github/v/release/ffbnchtt/pinyin-tones)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 
-Conversión de tonos de pinyin en tiempo real mientras escribís.
+Conversión de tonos de pinyin en tiempo real.
 
 <img width="426" height="240" alt="pinyin_tones" src="https://github.com/user-attachments/assets/b4e897fc-b613-46b1-975f-5fce3b2ab804" />
 
