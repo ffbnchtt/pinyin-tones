@@ -15,7 +15,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Mapping
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -33,6 +33,7 @@ APP_NAME = 'pinyin_tones'
 ICON_BASENAME = 'pinyin_tones'
 LICENSE_SOURCE = ROOT_DIR / 'LICENSE'
 USER_GUIDE_SOURCE = ROOT_DIR / 'docs' / 'USER_GUIDE.md'
+DEFAULT_TIMESTAMP_URL = 'http://timestamp.digicert.com'
 
 
 def normalize_platform_name(system_name: str) -> str:
@@ -243,11 +244,59 @@ def run_pyinstaller(command: list[str], platform_name: str) -> None:
     subprocess.run(command, cwd=str(ROOT_DIR), env=build_pyinstaller_env(platform_name), check=True)
 
 
+def build_signing_command(artifact_path: Path, env: Mapping[str, str]) -> list[str] | None:
+    """Build the SignTool command for a configured Windows Authenticode signature."""
+    cert_sha1 = env.get('PINYIN_SIGN_CERT_SHA1', '').strip()
+    cert_file = env.get('PINYIN_SIGN_CERT_FILE', '').strip()
+    if not cert_sha1 and not cert_file:
+        return None
+    if cert_sha1 and cert_file:
+        raise ValueError('Set either PINYIN_SIGN_CERT_SHA1 or PINYIN_SIGN_CERT_FILE, not both.')
+
+    signtool_path = env.get('PINYIN_SIGNTOOL_PATH', 'signtool').strip() or 'signtool'
+    timestamp_url = env.get('PINYIN_SIGN_TIMESTAMP_URL', DEFAULT_TIMESTAMP_URL).strip()
+    if not timestamp_url:
+        raise ValueError('PINYIN_SIGN_TIMESTAMP_URL cannot be empty when signing is enabled.')
+
+    command = [
+        signtool_path,
+        'sign',
+        '/fd',
+        'SHA256',
+        '/tr',
+        timestamp_url,
+        '/td',
+        'SHA256',
+        '/v',
+    ]
+    if cert_sha1:
+        command.extend(['/sha1', cert_sha1])
+    else:
+        command.extend(['/f', cert_file])
+        cert_password = env.get('PINYIN_SIGN_CERT_PASSWORD', '')
+        if cert_password:
+            command.extend(['/p', cert_password])
+    command.append(str(artifact_path))
+    return command
+
+
+def sign_windows_artifact(artifact_path: Path, env: Mapping[str, str] | None = None) -> None:
+    """Sign the Windows executable when signing environment variables are configured."""
+    if artifact_path.suffix.lower() != '.exe':
+        return
+    command = build_signing_command(artifact_path, env or os.environ)
+    if command is None:
+        return
+    subprocess.run(command, cwd=str(ROOT_DIR), check=True)
+
+
 def build(platform_name: str) -> Path:
     icon_assets = ensure_icon_assets()
     command = build_pyinstaller_command(platform_name, icon_assets)
     run_pyinstaller(command, platform_name)
     artifact_path = find_artifact_path(platform_name)
+    if platform_name == 'windows':
+        sign_windows_artifact(artifact_path)
     release_dir = copy_release_payload(platform_name, artifact_path, icon_assets)
     remove_standalone_artifact(artifact_path, release_dir)
     return release_dir

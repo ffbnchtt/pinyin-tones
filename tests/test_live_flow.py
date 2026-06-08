@@ -1,3 +1,4 @@
+import io
 import unittest
 import tempfile
 from types import SimpleNamespace
@@ -8,6 +9,13 @@ from pinyin_app import clipboard as clipboard_mod
 from pinyin_app import buffer as buffer_mod
 from pinyin_app import keyboard_output as keyboard_output_mod
 from pinyin_app.update_check import ReleaseInfo, UpdateState
+
+
+class TestProductionLogging(unittest.TestCase):
+    def test_app_logger_only_emits_errors_by_default(self):
+        self.assertEqual(pinyin_live.logger.level, pinyin_live.logging.ERROR)
+        for handler in pinyin_live.logger.handlers:
+            self.assertGreaterEqual(handler.level, pinyin_live.logging.ERROR)
 
 
 class TestLiveReplacementFlow(unittest.TestCase):
@@ -503,11 +511,14 @@ class TestSingleInstanceGuard(unittest.TestCase):
             def __exit__(self, _exc_type, _exc, _tb):
                 return None
 
+        stderr = io.StringIO()
         with mock.patch.object(pinyin_live, "SingleInstanceLock", BusyLock), \
-             mock.patch.object(pinyin_live, "_run_main_loop") as fake_run:
+             mock.patch.object(pinyin_live, "_run_main_loop") as fake_run, \
+             mock.patch.object(pinyin_live.sys, "stderr", stderr):
             pinyin_live.main()
 
         fake_run.assert_not_called()
+        self.assertIn("Another Pinyin Tones instance is already running", stderr.getvalue())
 
     def test_main_runs_when_single_instance_lock_is_acquired(self):
         class AcquiredLock:
