@@ -5,8 +5,8 @@ from pathlib import Path
 
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
-ROOT_PACKAGE_DIR = ROOT_DIR / "pinyin_app"
-SRC_PACKAGE_DIR = ROOT_DIR / "src" / "pinyin_app"
+ROOT_PACKAGE_DIR = ROOT_DIR / "pinyin_tones"
+SRC_PACKAGE_DIR = ROOT_DIR / "src" / "pinyin_tones"
 
 
 class TestDevEntrypoint(unittest.TestCase):
@@ -17,10 +17,10 @@ class TestDevEntrypoint(unittest.TestCase):
                 "-c",
                 (
                     "import importlib.util; "
-                    "import pinyin_app; "
-                    "main_spec = importlib.util.find_spec('pinyin_app.__main__'); "
-                    "live_spec = importlib.util.find_spec('pinyin_app.pinyin_live'); "
-                    "print(pinyin_app.__file__); "
+                    "import pinyin_tones; "
+                    "main_spec = importlib.util.find_spec('pinyin_tones.__main__'); "
+                    "live_spec = importlib.util.find_spec('pinyin_tones.pinyin_live'); "
+                    "print(pinyin_tones.__file__); "
                     "print(main_spec.origin if main_spec else ''); "
                     "print(live_spec.origin if live_spec else '')"
                 ),

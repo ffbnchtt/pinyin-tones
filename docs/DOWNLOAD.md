@@ -10,10 +10,10 @@ Instalá dependencias y ejecutá en desarrollo:
 
 ```powershell
 pip install -e .
-python src/pinyin_app/pinyin_live.py
+python src/pinyin_tones/pinyin_live.py
 
 # Alternativa si querés ejecutar como módulo instalado
-python -m pinyin_app
+python -m pinyin_tones
 ```
 
 Si también vas a compilar ejecutables:
@@ -59,24 +59,24 @@ Ejemplos directos con PyInstaller (solo si necesitas personalizar):
 Windows:
 
 ```cmd
-pyinstaller --onefile --noconsole --name pinyin_tones --paths src --hidden-import pinyin_app.pinyin_converter src/pinyin_app/pinyin_live.py
+pyinstaller --onefile --noconsole --name pinyin_tones --paths src --hidden-import pinyin_tones.pinyin_converter src/pinyin_tones/pinyin_live.py
 ```
 
 macOS:
 
 ```bash
-pyinstaller --onefile --windowed --name pinyin_tones --paths src --hidden-import pinyin_app.pinyin_converter src/pinyin_app/pinyin_live.py
+pyinstaller --onefile --windowed --name pinyin_tones --paths src --hidden-import pinyin_tones.pinyin_converter src/pinyin_tones/pinyin_live.py
 ```
 
 Linux:
 
 ```bash
-pyinstaller --onefile --noconsole --name pinyin_tones --paths src --hidden-import pinyin_app.pinyin_converter src/pinyin_app/pinyin_live.py
+pyinstaller --onefile --noconsole --name pinyin_tones --paths src --hidden-import pinyin_tones.pinyin_converter src/pinyin_tones/pinyin_live.py
 ```
 
 ## Íconos del tray
 
-- Los PNG del tray se cargan desde `src/pinyin_app/assets/tray`.
+- Los PNG del tray se cargan desde `src/pinyin_tones/assets/tray`.
 - Mantené variantes en 16/20/24/32/64 px con el prefijo `tray_quicksand_o_caron_`.
 - El helper `build_release.py` empaqueta esos assets automáticamente cuando existen.
 

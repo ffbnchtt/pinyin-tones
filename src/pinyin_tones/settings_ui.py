@@ -11,13 +11,13 @@ from PIL import ImageTk
 import tkinter as tk
 from tkinter import messagebox, ttk
 
-from pinyin_app.hotkeys import (
+from pinyin_tones.hotkeys import (
     format_hotkey,
     format_hotkey_display,
     normalize_pynput_trigger_key,
     parse_hotkey,
 )
-from pinyin_app.tray_ui import create_tray_image
+from pinyin_tones.tray_ui import create_tray_image
 
 
 class HotkeySettingsDialog:
@@ -34,7 +34,7 @@ class HotkeySettingsDialog:
     ) -> None:
         self.app = app
         self.dialog_title = dialog_title
-        self.logger = logger or logging.getLogger('pinyin_app')
+        self.logger = logger or logging.getLogger('pinyin_tones')
         self.sync_autostart = sync_autostart
         self.save_config = save_config
         self.startup_enabled_default = startup_enabled_default
@@ -53,13 +53,13 @@ class HotkeySettingsDialog:
 
     def run(self) -> None:
         """Open the dialog and block until closed."""
-        getattr(self, 'logger', logging.getLogger('pinyin_app')).info('Hotkey settings dialog opening')
+        getattr(self, 'logger', logging.getLogger('pinyin_tones')).info('Hotkey settings dialog opening')
         try:
             self._build_window()
             self.root.mainloop()
         finally:
             self._stop_listener()
-            getattr(self, 'logger', logging.getLogger('pinyin_app')).info('Hotkey settings dialog closed')
+            getattr(self, 'logger', logging.getLogger('pinyin_tones')).info('Hotkey settings dialog closed')
 
     def _build_window(self) -> None:
         self.root.attributes('-topmost', True)
@@ -152,7 +152,7 @@ class HotkeySettingsDialog:
             suppress=True,
         )
         self.capture_state['listener'].start()
-        getattr(self, 'logger', logging.getLogger('pinyin_app')).info('Hotkey capture listener started with suppress=True')
+        getattr(self, 'logger', logging.getLogger('pinyin_tones')).info('Hotkey capture listener started with suppress=True')
 
     def _stop_listener(self) -> None:
         listener = self.capture_state.get('listener')
@@ -271,7 +271,7 @@ class HotkeySettingsDialog:
         if not new or not self.capture_state['trigger']:
             messagebox.showerror('Error', 'El hotkey debe incluir una tecla principal, por ejemplo p')
             return
-        getattr(self, 'logger', logging.getLogger('pinyin_app')).info(f'Hotkey dialog saving new hotkey={new!r}')
+        getattr(self, 'logger', logging.getLogger('pinyin_tones')).info(f'Hotkey dialog saving new hotkey={new!r}')
         self.app.config['hotkey'] = new
         self.save_config(self.app.config)
         self.app.hotkey = new
@@ -295,7 +295,7 @@ class HotkeySettingsDialog:
 
     def on_capture_press(self, key):
         """Handle a key press during capture."""
-        getattr(self, 'logger', logging.getLogger('pinyin_app')).info(f'Capture press received: key={key!r}')
+        getattr(self, 'logger', logging.getLogger('pinyin_tones')).info(f'Capture press received: key={key!r}')
         if key == keyboard.Key.esc:
             self.cancel()
             return False

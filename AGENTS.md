@@ -11,7 +11,7 @@ Prioritize correctness, maintainability, clear error handling, security, and tes
 ## Project Commands
 
 - Run tests: `python tools/run_tests.py`
-- Run from source: `python -m pinyin_app`
+- Run from source: `python -m pinyin_tones`
 - Build a package: `python tools/build_release.py --platform windows`
 
 Do not claim tests passed unless they actually ran. If GUI, OS permission, keyboard listener, tray, clipboard, registry, launch-agent, or network behavior cannot be verified locally, state that clearly.
@@ -23,21 +23,21 @@ Use the smallest applicable agent/skill for the request.
 ### Pinyin Conversion Agent
 
 - Skill: `.codex/skills/pinyin-conversion-rules`
-- Owns: `src/pinyin_app/pinyin_converter.py`, `tests/test_converter.py`
+- Owns: `src/pinyin_tones/pinyin_converter.py`, `tests/test_converter.py`
 - Use for: token matching, tone placement, `v`/`ü`, case preservation, neutral tone behavior, and pure conversion tests.
 - Keep this area pure. Do not add runtime, UI, clipboard, keyboard, config, or platform concerns here.
 
 ### Pinyin Live Runtime Agent
 
 - Skill: `.codex/skills/pinyin-live-runtime`
-- Owns: `src/pinyin_app/pinyin_live.py`, `buffer.py`, `clipboard.py`, `keyboard_output.py`, `hotkeys.py`, `settings_ui.py`, `tray_ui.py`, `config_store.py`, `autostart.py`, and `tests/test_live_flow.py`
+- Owns: `src/pinyin_tones/pinyin_live.py`, `buffer.py`, `clipboard.py`, `keyboard_output.py`, `hotkeys.py`, `settings_ui.py`, `tray_ui.py`, `config_store.py`, `autostart.py`, and `tests/test_live_flow.py`
 - Use for: global keyboard listeners, live replacement, buffer state, synthetic input suppression, clipboard restore, hotkey capture, tray/settings UI, config, and autostart.
 - Prefer mocks and isolated global-state setup in tests.
 
 ### Pinyin Release Updates Agent
 
 - Skill: `.codex/skills/pinyin-release-updates`
-- Owns: `tools/build_release.py`, `tools/build_*.sh`, `tools/build_windows.bat`, `src/pinyin_app/update_check.py`, `update_dialog.py`, `version.py`, `pyproject.toml`, `docs/BUILD.md`, `docs/DOWNLOAD.md`, `tests/test_build_release.py`, and `tests/test_update_check.py`
+- Owns: `tools/build_release.py`, `tools/build_*.sh`, `tools/build_windows.bat`, `src/pinyin_tones/update_check.py`, `update_dialog.py`, `version.py`, `pyproject.toml`, `docs/BUILD.md`, `docs/DOWNLOAD.md`, `tests/test_build_release.py`, and `tests/test_update_check.py`
 - Use for: package builds, PyInstaller flags, release asset names, version comparisons, GitHub release checks, downloads, and update dialogs.
 - Keep release asset names stable unless the user explicitly changes the release contract.
 

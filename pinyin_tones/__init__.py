@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-SRC_PACKAGE_DIR = Path(__file__).resolve().parents[1] / "src" / "pinyin_app"
+SRC_PACKAGE_DIR = Path(__file__).resolve().parents[1] / "src" / "pinyin_tones"
 
 if SRC_PACKAGE_DIR.exists():
     src_package_path = str(SRC_PACKAGE_DIR)

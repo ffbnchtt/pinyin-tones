@@ -1,6 +1,6 @@
 ---
 name: pinyin-release-updates
-description: Handle packaging, executable builds, release payloads, version helpers, GitHub release update checks, update downloads, update dialogs, and release documentation. Use when editing tools/build_release.py, tools/build_*.sh, tools/build_windows.bat, src/pinyin_app/update_check.py, src/pinyin_app/update_dialog.py, src/pinyin_app/version.py, pyproject.toml, or release docs/tests.
+description: Handle packaging, executable builds, release payloads, version helpers, GitHub release update checks, update downloads, update dialogs, and release documentation. Use when editing tools/build_release.py, tools/build_*.sh, tools/build_windows.bat, src/pinyin_tones/update_check.py, src/pinyin_tones/update_dialog.py, src/pinyin_tones/version.py, pyproject.toml, or release docs/tests.
 ---
 
 # Pinyin Release Updates
@@ -17,9 +17,9 @@ description: Handle packaging, executable builds, release payloads, version help
 ## Scope
 
 - Build and packaging scripts in `tools/`.
-- Version comparison in `src/pinyin_app/version.py`.
-- Update discovery/download in `src/pinyin_app/update_check.py`.
-- User-facing update prompt in `src/pinyin_app/update_dialog.py` and `pinyin_live.PinyinApp`.
+- Version comparison in `src/pinyin_tones/version.py`.
+- Update discovery/download in `src/pinyin_tones/update_check.py`.
+- User-facing update prompt in `src/pinyin_tones/update_dialog.py` and `pinyin_live.PinyinApp`.
 - Build/download docs under `docs/` and release notes expectations in `README.md`.
 
 ## Reference

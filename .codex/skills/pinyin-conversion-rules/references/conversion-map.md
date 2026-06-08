@@ -2,7 +2,7 @@
 
 ## Owned Files
 
-- `src/pinyin_app/pinyin_converter.py`: pure Hanyu Pinyin conversion helpers.
+- `src/pinyin_tones/pinyin_converter.py`: pure Hanyu Pinyin conversion helpers.
 - `tests/test_converter.py`: focused unit tests for token conversion and vowel detection.
 
 ## Current Contracts

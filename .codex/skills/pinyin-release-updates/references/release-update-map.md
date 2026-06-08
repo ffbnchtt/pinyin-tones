@@ -20,7 +20,7 @@
 
 ## Versioning
 
-- Public version is in `src/pinyin_app/version.py` and `pyproject.toml`.
+- Public version is in `src/pinyin_tones/version.py` and `pyproject.toml`.
 - Tags may include a leading `v`; comparisons should normalize before SemVer tuple comparison.
 
 ## Test Targets

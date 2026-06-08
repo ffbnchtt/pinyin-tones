@@ -14,7 +14,7 @@ ICON_SIZES = (16, 20, 24, 32, 64)
 
 def _asset_root() -> Path:
     if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
-        return Path(sys._MEIPASS) / "pinyin_app" / "assets" / "tray"
+        return Path(sys._MEIPASS) / "pinyin_tones" / "assets" / "tray"
     return ASSET_DIR
 
 

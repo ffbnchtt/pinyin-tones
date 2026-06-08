@@ -2,8 +2,8 @@
 
 ## Flujo en tiempo de ejecución
 
-- `src/pinyin_app/pinyin_live.py` inicia los listeners globales de teclado y el ícono en la bandeja.
-- `src/pinyin_app/pinyin_converter.py` convierte tokens como `ni3` o `hao3` en pinyin con marcas de tono.
+- `src/pinyin_tones/pinyin_live.py` inicia los listeners globales de teclado y el ícono en la bandeja.
+- `src/pinyin_tones/pinyin_converter.py` convierte tokens como `ni3` o `hao3` en pinyin con marcas de tono.
 - El listener en vivo mantiene un buffer chico, detecta el atajo configurado y reemplaza el último token usando el portapapeles para asegurar compatibilidad Unicode.
 - Durante el reemplazo se activa una ventana corta de supresión de entrada para evitar que las pulsaciones sintetizadas reingresen al listener.
 

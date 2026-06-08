@@ -11,9 +11,9 @@ try:
 except Exception:  # pragma: no cover - optional dep
     pyperclip = None
 
-from pinyin_app.keyboard_output import paste_shortcut, type_text
+from pinyin_tones.keyboard_output import paste_shortcut, type_text
 
-logger = logging.getLogger("pinyin_app")
+logger = logging.getLogger("pinyin_tones")
 
 CLIPBOARD_RESTORE_DELAY = 0.15
 CLIPBOARD_SYNC_TIMEOUT = 0.01

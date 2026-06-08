@@ -5,8 +5,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest import mock
 
-from pinyin_app import update_check
-from pinyin_app.version import is_newer_version, normalize_version, parse_version
+from pinyin_tones import update_check
+from pinyin_tones.version import is_newer_version, normalize_version, parse_version
 
 
 class FakeResponse:

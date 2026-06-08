@@ -34,7 +34,7 @@ pip install -e .
 ### Ejecutar la aplicación (modo desarrollo)
 
 ```bash
-python -m pinyin_app
+python -m pinyin_tones
 ```
 
 Si también querés compilar ejecutables desde la fuente:
@@ -85,7 +85,7 @@ Además, la app guarda estado interno para actualizaciones:
 - `downloaded_update_version`
 - `downloaded_update_path`
 
-Para ajustes avanzados de reemplazo, revisá `src/pinyin_app/pinyin_converter.py` y `src/pinyin_app/pinyin_live.py`.
+Para ajustes avanzados de reemplazo, revisá `src/pinyin_tones/pinyin_converter.py` y `src/pinyin_tones/pinyin_live.py`.
 
 ## Ejecutar pruebas
 

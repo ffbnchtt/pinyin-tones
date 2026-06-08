@@ -21,7 +21,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 SRC_DIR = ROOT_DIR / 'src'
-APP_DIR = SRC_DIR / 'pinyin_app'
+APP_DIR = SRC_DIR / 'pinyin_tones'
 SRC_PATH = APP_DIR / 'pinyin_live.py'
 DIST_DIR = ROOT_DIR / 'dist'
 BUILD_DIR = ROOT_DIR / 'build'
@@ -149,12 +149,12 @@ def build_pyinstaller_command(platform_name: str, icon_assets: dict[str, Path]) 
         '--paths',
         str(SRC_DIR),
         '--hidden-import',
-        'pinyin_app.pinyin_converter',
+        'pinyin_tones.pinyin_converter',
         str(SRC_PATH),
     ]
     if TRAY_ASSET_DIR.exists():
         data_sep = ';' if platform_name == 'windows' else ':'
-        data_spec = f'{TRAY_ASSET_DIR}{data_sep}pinyin_app/assets/tray'
+        data_spec = f'{TRAY_ASSET_DIR}{data_sep}pinyin_tones/assets/tray'
         command.extend(['--add-data', data_spec])
     if platform_name == 'windows':
         command.insert(4, '--noconsole')
