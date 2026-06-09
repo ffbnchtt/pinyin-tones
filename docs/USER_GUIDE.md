@@ -2,7 +2,7 @@
 
 ## Qué hace esta aplicación
 
-Pinyin Tones escucha lo que escribís y convierte tokens como `ni3` o `hao3` en Pinyin con marcas de tono en tiempo real.
+Pinyin Tones convierte sílabas de pinyin con número de tono, como `ni3` o `hao3`, en pinyin con marcas de tono: `nǐ`, `hǎo`.
 
 Esta aplicación es portable: no requiere instalación. La app intenta guardar configuración, logs y descargas de actualizaciones en la carpeta donde la ejecutás; si esa carpeta no es escribible, usa una carpeta de datos del usuario.
 
@@ -10,8 +10,17 @@ Esta aplicación es portable: no requiere instalación. La app intenta guardar c
 
 1. Iniciá la aplicación.
 2. Usá el atajo o el ícono en la bandeja del sistema para activarla o desactivarla.
-3. Escribí un token de Pinyin seguido por un número de tono (1-4).
-4. La aplicación reemplaza el token con la versión con marca de tono.
+3. Escribí una sílaba de pinyin y agregá el número del tono al final.
+4. La aplicación reemplaza automáticamente lo que escribiste por la versión con marca de tono.
+
+Ejemplos:
+
+- `ni3` se convierte en `nǐ`
+- `hao3` se convierte en `hǎo`
+- `zhong1` se convierte en `zhōng`
+- `guo2` se convierte en `guó`
+
+Usá los números `1`, `2`, `3` y `4` para los tonos.
 
 ## Configuración
 

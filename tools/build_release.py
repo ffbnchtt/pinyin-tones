@@ -14,6 +14,7 @@ import plistlib
 import shutil
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 from typing import Iterable, Mapping
 
@@ -34,6 +35,11 @@ ICON_BASENAME = 'pinyin_tones'
 LICENSE_SOURCE = ROOT_DIR / 'LICENSE'
 USER_GUIDE_SOURCE = ROOT_DIR / 'docs' / 'USER_GUIDE.md'
 DEFAULT_TIMESTAMP_URL = 'http://timestamp.digicert.com'
+RELEASE_ASSET_NAMES = {
+    'windows': 'pinyin-tones-windows.zip',
+    'macos': 'pinyin-tones-macos.zip',
+    'linux': 'pinyin-tones-linux.zip',
+}
 
 
 def normalize_platform_name(system_name: str) -> str:
@@ -226,6 +232,25 @@ def remove_standalone_artifact(artifact_path: Path, release_dir: Path) -> None:
         artifact_path.unlink()
 
 
+def create_release_archive(platform_name: str, release_dir: Path) -> Path:
+    """Create the upload-ready GitHub release archive for a platform payload."""
+    try:
+        asset_name = RELEASE_ASSET_NAMES[platform_name]
+    except KeyError as exc:
+        raise ValueError(f'Unsupported release platform: {platform_name}') from exc
+
+    archive_path = DIST_DIR / asset_name
+    if archive_path.exists():
+        archive_path.unlink()
+
+    archive_root = archive_path.stem
+    with zipfile.ZipFile(archive_path, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
+        for path in sorted(release_dir.rglob('*')):
+            if path.is_file():
+                archive.write(path, Path(archive_root) / path.relative_to(release_dir))
+    return archive_path
+
+
 def build_pyinstaller_env(platform_name: str) -> dict[str, str]:
     env = os.environ.copy()
     if platform_name != 'windows':
@@ -299,6 +324,7 @@ def build(platform_name: str) -> Path:
         sign_windows_artifact(artifact_path)
     release_dir = copy_release_payload(platform_name, artifact_path, icon_assets)
     remove_standalone_artifact(artifact_path, release_dir)
+    create_release_archive(platform_name, release_dir)
     return release_dir
 
 
@@ -306,6 +332,7 @@ def main() -> int:
     args = parse_args()
     release_dir = build(args.platform)
     print(f'Build complete: {release_dir}')
+    print(f'Release archive: {DIST_DIR / RELEASE_ASSET_NAMES[args.platform]}')
     return 0
 
 

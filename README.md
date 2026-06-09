@@ -49,7 +49,7 @@ Para generar un paquete local:
 python tools/build_release.py --platform windows
 ```
 
-Reemplazá `windows` por `macos` o `linux` según corresponda.
+Reemplazá `windows` por `macos` o `linux` según corresponda. El comando genera una carpeta de payload en `dist/pinyin_tones_release/` y un `.zip` listo para subir a GitHub Releases.
 
 Cuando publiques releases en GitHub para que la app pueda detectar actualizaciones, usá nombres de assets estables por plataforma:
 
@@ -60,7 +60,7 @@ Cuando publiques releases en GitHub para que la app pueda detectar actualizacion
 ## Uso básico
 
 - Activá o desactivá la funcionalidad desde el ícono en la bandeja.
-- Escribí un token con número de tono, por ejemplo `ni3` o `hao3` —se reemplaza automáticamente por `nǐ` o `hǎo`.
+- Escribí una sílaba de pinyin con número de tono, por ejemplo `ni3` o `hao3` —se reemplaza automáticamente por `nǐ` o `hǎo`.
 
 ## Compatibilidad y permisos
 

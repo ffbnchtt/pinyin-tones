@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 from unittest import mock
 
@@ -114,6 +115,49 @@ class TestBuildReleaseHelpers(unittest.TestCase):
                 build_release.remove_standalone_artifact(artifact_path, release_dir)
 
             self.assertTrue(artifact_path.exists())
+
+    def test_create_release_archive_uses_stable_asset_name_and_top_level_folder(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            release_dir = temp_path / 'pinyin_tones_release' / 'windows'
+            release_dir.mkdir(parents=True)
+            (release_dir / 'pinyin_tones.exe').write_text('binary', encoding='utf-8')
+            (release_dir / 'LICENSE').write_text('license', encoding='utf-8')
+
+            with mock.patch.object(build_release, 'DIST_DIR', temp_path):
+                archive_path = build_release.create_release_archive('windows', release_dir)
+
+            self.assertEqual(archive_path, temp_path / 'pinyin-tones-windows.zip')
+            with zipfile.ZipFile(archive_path) as archive:
+                self.assertEqual(
+                    sorted(archive.namelist()),
+                    [
+                        'pinyin-tones-windows/LICENSE',
+                        'pinyin-tones-windows/pinyin_tones.exe',
+                    ],
+                )
+
+    def test_create_release_archive_replaces_existing_archive(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            release_dir = temp_path / 'pinyin_tones_release' / 'windows'
+            release_dir.mkdir(parents=True)
+            (release_dir / 'pinyin_tones.exe').write_text('binary', encoding='utf-8')
+            archive_path = temp_path / 'pinyin-tones-windows.zip'
+            archive_path.write_text('old archive', encoding='utf-8')
+
+            with mock.patch.object(build_release, 'DIST_DIR', temp_path):
+                build_release.create_release_archive('windows', release_dir)
+
+            with zipfile.ZipFile(archive_path) as archive:
+                self.assertEqual(
+                    archive.namelist(),
+                    ['pinyin-tones-windows/pinyin_tones.exe'],
+                )
+
+    def test_create_release_archive_rejects_unsupported_platform(self):
+        with self.assertRaises(ValueError):
+            build_release.create_release_archive('freebsd', Path('release'))
 
     def test_build_signing_command_is_disabled_without_certificate_config(self):
         command = build_release.build_signing_command(Path('pinyin_tones.exe'), {})

@@ -30,6 +30,8 @@ Windows:
 python tools\build_release.py --platform windows
 ```
 
+El comando genera la carpeta `dist\pinyin_tones_release\windows` y el zip listo para subir a GitHub Releases: `dist\pinyin-tones-windows.zip`.
+
 Firma Authenticode para Windows:
 
 ```powershell
@@ -48,11 +50,15 @@ macOS:
 python3 tools/build_release.py --platform macos
 ```
 
+Genera `dist/pinyin-tones-macos.zip`.
+
 Linux:
 
 ```bash
 python3 tools/build_release.py --platform linux
 ```
+
+Genera `dist/pinyin-tones-linux.zip`.
 
 Ejemplos directos con PyInstaller (solo si necesitas personalizar):
 
