@@ -49,13 +49,7 @@ Para generar un paquete local:
 python tools/build_release.py --platform windows
 ```
 
-Reemplazá `windows` por `macos` o `linux` según corresponda. El comando genera una carpeta de payload en `dist/pinyin_tones_release/` y un `.zip` listo para subir a GitHub Releases.
-
-Cuando publiques releases en GitHub para que la app pueda detectar actualizaciones, usá nombres de assets estables por plataforma:
-
-- `pinyin-tones-windows.zip`
-- `pinyin-tones-macos.zip`
-- `pinyin-tones-linux.zip`
+Reemplazá `windows` por `macos` o `linux` según corresponda. El comando genera una carpeta de payload en `dist/pinyin_tones_release/` y un `.zip`.
 
 ## Uso básico
 
