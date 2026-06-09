@@ -16,7 +16,7 @@ import subprocess
 import sys
 import zipfile
 from pathlib import Path
-from typing import Iterable, Mapping
+from typing import Iterable
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -34,7 +34,8 @@ APP_NAME = 'pinyin_tones'
 ICON_BASENAME = 'pinyin_tones'
 LICENSE_SOURCE = ROOT_DIR / 'LICENSE'
 USER_GUIDE_SOURCE = ROOT_DIR / 'docs' / 'USER_GUIDE.md'
-DEFAULT_TIMESTAMP_URL = 'http://timestamp.digicert.com'
+TK_RUNTIME_HOOK = BUILD_DIR / 'pyinstaller_tk_runtime.py'
+PYINSTALLER_HOOK_DIR = BUILD_DIR / 'pyinstaller_hooks'
 RELEASE_ASSET_NAMES = {
     'windows': 'pinyin-tones-windows.zip',
     'macos': 'pinyin-tones-macos.zip',
@@ -165,6 +166,7 @@ def build_pyinstaller_command(platform_name: str, icon_assets: dict[str, Path]) 
     if platform_name == 'windows':
         command.insert(4, '--noconsole')
         command.extend(['--icon', str(icon_assets['ico'])])
+        command.extend(build_windows_tk_options())
     elif platform_name == 'macos':
         command.insert(4, '--windowed')
         command.extend(['--icon', str(icon_assets['icns'])])
@@ -243,12 +245,100 @@ def create_release_archive(platform_name: str, release_dir: Path) -> Path:
     if archive_path.exists():
         archive_path.unlink()
 
-    archive_root = archive_path.stem
     with zipfile.ZipFile(archive_path, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
         for path in sorted(release_dir.rglob('*')):
             if path.is_file():
-                archive.write(path, Path(archive_root) / path.relative_to(release_dir))
+                archive.write(path, path.relative_to(release_dir))
     return archive_path
+
+
+def get_tk_paths() -> tuple[Path, Path, Path, Path, Path]:
+    """Return the local Python Tcl/Tk paths needed for Windows PyInstaller builds."""
+    python_root = Path(sys.base_prefix)
+    tcl_library = python_root / 'tcl' / 'tcl8.6'
+    tk_library = python_root / 'tcl' / 'tk8.6'
+    tkinter_binary = python_root / 'DLLs' / '_tkinter.pyd'
+    tcl_binary = python_root / 'DLLs' / 'tcl86t.dll'
+    tk_binary = python_root / 'DLLs' / 'tk86t.dll'
+    return tcl_library, tk_library, tkinter_binary, tcl_binary, tk_binary
+
+
+def ensure_windows_tk_runtime_hook() -> Path:
+    """Write a PyInstaller runtime hook that points Tkinter to bundled Tcl/Tk data."""
+    BUILD_DIR.mkdir(parents=True, exist_ok=True)
+    TK_RUNTIME_HOOK.write_text(
+        "\n".join(
+            [
+                "import os",
+                "import sys",
+                "",
+                "base_dir = getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))",
+                "tcl_dir = os.path.join(base_dir, '_tcl_data')",
+                "tk_dir = os.path.join(base_dir, '_tk_data')",
+                "if os.path.isdir(tcl_dir):",
+                "    os.environ['TCL_LIBRARY'] = tcl_dir",
+                "if os.path.isdir(tk_dir):",
+                "    os.environ['TK_LIBRARY'] = tk_dir",
+                "",
+            ]
+        ),
+        encoding='utf-8',
+    )
+    return TK_RUNTIME_HOOK
+
+
+def ensure_windows_tk_hook_dir() -> Path:
+    """Write hooks that keep PyInstaller from excluding tkinter on this Windows install."""
+    pre_find_dir = PYINSTALLER_HOOK_DIR / 'pre_find_module_path'
+    pre_find_dir.mkdir(parents=True, exist_ok=True)
+    (pre_find_dir / 'hook-tkinter.py').write_text(
+        "\n".join(
+            [
+                "def pre_find_module_path(hook_api):",
+                "    return None",
+                "",
+            ]
+        ),
+        encoding='utf-8',
+    )
+    return PYINSTALLER_HOOK_DIR
+
+
+def build_windows_tk_options() -> list[str]:
+    """Return explicit Tkinter bundle options for Windows PyInstaller builds."""
+    tcl_library, tk_library, tkinter_binary, tcl_binary, tk_binary = get_tk_paths()
+    missing_paths = [
+        path
+        for path in (tcl_library, tk_library, tkinter_binary, tcl_binary, tk_binary)
+        if not path.exists()
+    ]
+    if missing_paths:
+        missing = ', '.join(str(path) for path in missing_paths)
+        raise FileNotFoundError(f'Missing Tcl/Tk runtime files required for Windows build: {missing}')
+
+    data_sep = ';'
+    runtime_hook = ensure_windows_tk_runtime_hook()
+    hook_dir = ensure_windows_tk_hook_dir()
+    return [
+        '--additional-hooks-dir',
+        str(hook_dir),
+        '--hidden-import',
+        'tkinter',
+        '--hidden-import',
+        '_tkinter',
+        '--add-data',
+        f'{tcl_library}{data_sep}_tcl_data',
+        '--add-data',
+        f'{tk_library}{data_sep}_tk_data',
+        '--add-binary',
+        f'{tkinter_binary}{data_sep}.',
+        '--add-binary',
+        f'{tcl_binary}{data_sep}.',
+        '--add-binary',
+        f'{tk_binary}{data_sep}.',
+        '--runtime-hook',
+        str(runtime_hook),
+    ]
 
 
 def build_pyinstaller_env(platform_name: str) -> dict[str, str]:
@@ -269,59 +359,11 @@ def run_pyinstaller(command: list[str], platform_name: str) -> None:
     subprocess.run(command, cwd=str(ROOT_DIR), env=build_pyinstaller_env(platform_name), check=True)
 
 
-def build_signing_command(artifact_path: Path, env: Mapping[str, str]) -> list[str] | None:
-    """Build the SignTool command for a configured Windows Authenticode signature."""
-    cert_sha1 = env.get('PINYIN_SIGN_CERT_SHA1', '').strip()
-    cert_file = env.get('PINYIN_SIGN_CERT_FILE', '').strip()
-    if not cert_sha1 and not cert_file:
-        return None
-    if cert_sha1 and cert_file:
-        raise ValueError('Set either PINYIN_SIGN_CERT_SHA1 or PINYIN_SIGN_CERT_FILE, not both.')
-
-    signtool_path = env.get('PINYIN_SIGNTOOL_PATH', 'signtool').strip() or 'signtool'
-    timestamp_url = env.get('PINYIN_SIGN_TIMESTAMP_URL', DEFAULT_TIMESTAMP_URL).strip()
-    if not timestamp_url:
-        raise ValueError('PINYIN_SIGN_TIMESTAMP_URL cannot be empty when signing is enabled.')
-
-    command = [
-        signtool_path,
-        'sign',
-        '/fd',
-        'SHA256',
-        '/tr',
-        timestamp_url,
-        '/td',
-        'SHA256',
-        '/v',
-    ]
-    if cert_sha1:
-        command.extend(['/sha1', cert_sha1])
-    else:
-        command.extend(['/f', cert_file])
-        cert_password = env.get('PINYIN_SIGN_CERT_PASSWORD', '')
-        if cert_password:
-            command.extend(['/p', cert_password])
-    command.append(str(artifact_path))
-    return command
-
-
-def sign_windows_artifact(artifact_path: Path, env: Mapping[str, str] | None = None) -> None:
-    """Sign the Windows executable when signing environment variables are configured."""
-    if artifact_path.suffix.lower() != '.exe':
-        return
-    command = build_signing_command(artifact_path, env or os.environ)
-    if command is None:
-        return
-    subprocess.run(command, cwd=str(ROOT_DIR), check=True)
-
-
 def build(platform_name: str) -> Path:
     icon_assets = ensure_icon_assets()
     command = build_pyinstaller_command(platform_name, icon_assets)
     run_pyinstaller(command, platform_name)
     artifact_path = find_artifact_path(platform_name)
-    if platform_name == 'windows':
-        sign_windows_artifact(artifact_path)
     release_dir = copy_release_payload(platform_name, artifact_path, icon_assets)
     remove_standalone_artifact(artifact_path, release_dir)
     create_release_archive(platform_name, release_dir)

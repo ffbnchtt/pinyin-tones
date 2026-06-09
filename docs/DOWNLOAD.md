@@ -30,19 +30,7 @@ Windows:
 python tools\build_release.py --platform windows
 ```
 
-El comando genera la carpeta `dist\pinyin_tones_release\windows` y el zip listo para subir a GitHub Releases: `dist\pinyin-tones-windows.zip`.
-
-Firma Authenticode para Windows:
-
-```powershell
-$env:PINYIN_SIGN_CERT_SHA1 = "THUMBPRINT_DEL_CERTIFICADO"
-$env:PINYIN_SIGN_TIMESTAMP_URL = "http://timestamp.digicert.com"
-python tools\build_release.py --platform windows
-```
-
-Si usás un PFX, definí `PINYIN_SIGN_CERT_FILE` y, si corresponde, `PINYIN_SIGN_CERT_PASSWORD`. Si `signtool.exe` no está en el `PATH`, definí `PINYIN_SIGNTOOL_PATH`.
-
-La firma usa la identidad del certificado para el campo "Editor" de Windows. Un certificado autofirmado no alcanza para distribución pública, y SmartScreen puede seguir mostrando advertencias iniciales hasta que el archivo o el certificado ganen reputación.
+El comando genera la carpeta `dist\pinyin_tones_release\windows` y el zip listo para subir a GitHub Releases: `dist\pinyin-tones-windows.zip`. El zip guarda los archivos directamente en la raíz del archivo para que al extraerlo quede una sola carpeta.
 
 macOS:
 

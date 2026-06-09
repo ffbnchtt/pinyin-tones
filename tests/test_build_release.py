@@ -15,11 +15,13 @@ class TestBuildReleaseHelpers(unittest.TestCase):
 
     def test_build_pyinstaller_command_windows_uses_ico(self):
         icon_assets = {'ico': Path('C:/tmp/pinyin_tones.ico'), 'icns': Path('C:/tmp/pinyin_tones.icns'), 'png': Path('C:/tmp/pinyin_tones.png')}
-        command = build_release.build_pyinstaller_command('windows', icon_assets)
+        with mock.patch.object(build_release, 'build_windows_tk_options', return_value=['--tk-options']):
+            command = build_release.build_pyinstaller_command('windows', icon_assets)
         self.assertIn('--noconsole', command)
         self.assertIn('pinyin_tones', command)
         self.assertIn('--icon', command)
         self.assertIn(str(icon_assets['ico']), command)
+        self.assertIn('--tk-options', command)
 
     def test_build_pyinstaller_command_macos_uses_icns(self):
         icon_assets = {'ico': Path('C:/tmp/pinyin_tones.ico'), 'icns': Path('C:/tmp/pinyin_tones.icns'), 'png': Path('C:/tmp/pinyin_tones.png')}
@@ -116,7 +118,7 @@ class TestBuildReleaseHelpers(unittest.TestCase):
 
             self.assertTrue(artifact_path.exists())
 
-    def test_create_release_archive_uses_stable_asset_name_and_top_level_folder(self):
+    def test_create_release_archive_uses_stable_asset_name_and_flat_contents(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
             release_dir = temp_path / 'pinyin_tones_release' / 'windows'
@@ -132,8 +134,8 @@ class TestBuildReleaseHelpers(unittest.TestCase):
                 self.assertEqual(
                     sorted(archive.namelist()),
                     [
-                        'pinyin-tones-windows/LICENSE',
-                        'pinyin-tones-windows/pinyin_tones.exe',
+                        'LICENSE',
+                        'pinyin_tones.exe',
                     ],
                 )
 
@@ -152,81 +154,59 @@ class TestBuildReleaseHelpers(unittest.TestCase):
             with zipfile.ZipFile(archive_path) as archive:
                 self.assertEqual(
                     archive.namelist(),
-                    ['pinyin-tones-windows/pinyin_tones.exe'],
+                    ['pinyin_tones.exe'],
                 )
 
     def test_create_release_archive_rejects_unsupported_platform(self):
         with self.assertRaises(ValueError):
             build_release.create_release_archive('freebsd', Path('release'))
 
-    def test_build_signing_command_is_disabled_without_certificate_config(self):
-        command = build_release.build_signing_command(Path('pinyin_tones.exe'), {})
+    def test_build_windows_tk_options_includes_tkinter_runtime_files(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            tcl_library = temp_path / 'tcl' / 'tcl8.6'
+            tk_library = temp_path / 'tcl' / 'tk8.6'
+            tkinter_binary = temp_path / 'DLLs' / '_tkinter.pyd'
+            tcl_binary = temp_path / 'DLLs' / 'tcl86t.dll'
+            tk_binary = temp_path / 'DLLs' / 'tk86t.dll'
+            for path in (tcl_library, tk_library, tkinter_binary.parent):
+                path.mkdir(parents=True, exist_ok=True)
+            for path in (tkinter_binary, tcl_binary, tk_binary):
+                path.write_text('binary', encoding='utf-8')
 
-        self.assertIsNone(command)
+            with mock.patch.object(
+                build_release,
+                'get_tk_paths',
+                return_value=(tcl_library, tk_library, tkinter_binary, tcl_binary, tk_binary),
+            ), mock.patch.object(build_release, 'TK_RUNTIME_HOOK', temp_path / 'tk_runtime.py'), \
+                mock.patch.object(build_release, 'PYINSTALLER_HOOK_DIR', temp_path / 'hooks'):
+                command = build_release.build_windows_tk_options()
 
-    def test_build_signing_command_uses_certificate_thumbprint(self):
-        command = build_release.build_signing_command(
-            Path('pinyin_tones.exe'),
-            {
-                'PINYIN_SIGNTOOL_PATH': 'C:/Windows Kits/signtool.exe',
-                'PINYIN_SIGN_CERT_SHA1': 'ABC123',
-                'PINYIN_SIGN_TIMESTAMP_URL': 'https://timestamp.example.test',
-            },
-        )
+            self.assertIn('--additional-hooks-dir', command)
+            self.assertIn(str(temp_path / 'hooks'), command)
+            self.assertIn('--hidden-import', command)
+            self.assertIn('tkinter', command)
+            self.assertIn('_tkinter', command)
+            self.assertIn('--add-data', command)
+            self.assertIn(f'{tcl_library};_tcl_data', command)
+            self.assertIn(f'{tk_library};_tk_data', command)
+            self.assertIn('--add-binary', command)
+            self.assertIn(f'{tkinter_binary};.', command)
+            self.assertIn(f'{tcl_binary};.', command)
+            self.assertIn(f'{tk_binary};.', command)
+            self.assertIn('--runtime-hook', command)
+            self.assertTrue((temp_path / 'tk_runtime.py').exists())
+            self.assertTrue((temp_path / 'hooks' / 'pre_find_module_path' / 'hook-tkinter.py').exists())
 
-        self.assertEqual(command[0], 'C:/Windows Kits/signtool.exe')
-        self.assertIn('/fd', command)
-        self.assertIn('SHA256', command)
-        self.assertIn('/tr', command)
-        self.assertIn('https://timestamp.example.test', command)
-        self.assertIn('/td', command)
-        self.assertIn('/sha1', command)
-        self.assertIn('ABC123', command)
-        self.assertEqual(command[-1], 'pinyin_tones.exe')
-
-    def test_build_signing_command_uses_pfx_file_and_password(self):
-        command = build_release.build_signing_command(
-            Path('pinyin_tones.exe'),
-            {
-                'PINYIN_SIGN_CERT_FILE': 'C:/certs/pinyin.pfx',
-                'PINYIN_SIGN_CERT_PASSWORD': 'secret',
-            },
-        )
-
-        self.assertIn('/f', command)
-        self.assertIn('C:/certs/pinyin.pfx', command)
-        self.assertIn('/p', command)
-        self.assertIn('secret', command)
-
-    def test_build_signing_command_rejects_conflicting_certificate_config(self):
-        with self.assertRaises(ValueError):
-            build_release.build_signing_command(
-                Path('pinyin_tones.exe'),
-                {
-                    'PINYIN_SIGN_CERT_SHA1': 'ABC123',
-                    'PINYIN_SIGN_CERT_FILE': 'C:/certs/pinyin.pfx',
-                },
-            )
-
-    def test_sign_windows_artifact_runs_signtool_when_configured(self):
-        with mock.patch.object(build_release.subprocess, 'run') as fake_run:
-            build_release.sign_windows_artifact(
-                Path('pinyin_tones.exe'),
-                {'PINYIN_SIGN_CERT_SHA1': 'ABC123'},
-            )
-
-        fake_run.assert_called_once()
-        self.assertIn('/sha1', fake_run.call_args.args[0])
-        self.assertTrue(fake_run.call_args.kwargs['check'])
-
-    def test_sign_windows_artifact_skips_non_exe_files(self):
-        with mock.patch.object(build_release.subprocess, 'run') as fake_run:
-            build_release.sign_windows_artifact(
-                Path('pinyin_tones'),
-                {'PINYIN_SIGN_CERT_SHA1': 'ABC123'},
-            )
-
-        fake_run.assert_not_called()
+    def test_build_windows_tk_options_rejects_missing_runtime_files(self):
+        missing = Path('C:/missing/tcl8.6')
+        with mock.patch.object(
+            build_release,
+            'get_tk_paths',
+            return_value=(missing, missing, missing, missing, missing),
+        ):
+            with self.assertRaises(FileNotFoundError):
+                build_release.build_windows_tk_options()
 
 
 if __name__ == '__main__':
