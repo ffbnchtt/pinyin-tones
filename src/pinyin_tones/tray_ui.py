@@ -48,7 +48,7 @@ def _draw_fallback_base(image: Image.Image) -> None:
     )
 
 
-def _draw_status_badge(image: Image.Image, active: bool) -> None:
+def _draw_status_badge(image: Image.Image, active: bool, paused: bool = False) -> None:
     """Large visible Windows-style corner badge."""
     draw = ImageDraw.Draw(image)
     size = image.size[0]
@@ -57,7 +57,10 @@ def _draw_status_badge(image: Image.Image, active: bool) -> None:
     margin = max(1, int(size * 0.01))
     cx = size - radius - border - margin
     cy = size - radius - border - margin
-    color = (35, 210, 75, 255) if active else (220, 50, 50, 255)
+    if active and paused:
+        color = (245, 190, 35, 255)
+    else:
+        color = (35, 210, 75, 255) if active else (220, 50, 50, 255)
     draw.ellipse(
         (
             cx - radius - border,
@@ -83,6 +86,7 @@ def create_tray_image(
     size: int = 64,
     show_status: bool = True,
     with_background: bool = False,
+    paused: bool = False,
 ) -> Image.Image:
     """Create transparent tray icon."""
     base_icon = _load_base_icon(size)
@@ -92,5 +96,5 @@ def create_tray_image(
     if base_icon is not None:
         image.alpha_composite(base_icon)
     if show_status:
-        _draw_status_badge(image, active)
+        _draw_status_badge(image, active, paused=paused)
     return image

@@ -6,10 +6,12 @@
 - `src/pinyin_tones/pinyin_converter.py` convierte tokens como `ni3` o `hao3` en pinyin con marcas de tono.
 - El listener en vivo mantiene un buffer chico, detecta el atajo configurado y reemplaza el último token usando el portapapeles para asegurar compatibilidad Unicode.
 - Durante el reemplazo se activa una ventana corta de supresión de entrada para evitar que las pulsaciones sintetizadas reingresen al listener.
+- En Windows, `input_method.py` consulta el layout del hilo de la ventana en primer plano. Los métodos de entrada chino, japonés y coreano siempre pausan la conversión para no interceptar la selección numérica de candidatos.
 
 ## Componentes
 
 - Ícono en bandeja: muestra el estado activo/inactivo y abre la ventana de configuración.
+- El indicador de bandeja usa verde para conversión activa, rojo para desactivación manual y amarillo para la pausa automática por un método de entrada especial.
 - Diálogo de configuración: captura el atajo directo desde las teclas presionadas y lo guarda en `config.json`.
 - El diálogo usa una vista previa de solo lectura y botones alineados para una experiencia sencilla.
 - La opción "Iniciar con el sistema" escribe la entrada nativa correspondiente en Windows, macOS o Linux.
