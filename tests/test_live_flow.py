@@ -8,6 +8,8 @@ from pinyin_tones import pinyin_live
 from pinyin_tones import clipboard as clipboard_mod
 from pinyin_tones import buffer as buffer_mod
 from pinyin_tones import keyboard_output as keyboard_output_mod
+from pinyin_tones import input_method as input_method_mod
+from pinyin_tones import tray_ui as tray_ui_mod
 from pinyin_tones.update_check import ReleaseInfo, UpdateState
 
 
@@ -16,6 +18,87 @@ class TestProductionLogging(unittest.TestCase):
         self.assertEqual(pinyin_live.logger.level, pinyin_live.logging.ERROR)
         for handler in pinyin_live.logger.handlers:
             self.assertGreaterEqual(handler.level, pinyin_live.logging.ERROR)
+
+
+class TestSpecialInputMethodDetection(unittest.TestCase):
+    def test_cjk_language_ids_are_protected(self):
+        self.assertTrue(input_method_mod.is_special_input_language(0x0804))
+        self.assertTrue(input_method_mod.is_special_input_language(0x0411))
+        self.assertTrue(input_method_mod.is_special_input_language(0x0412))
+        self.assertFalse(input_method_mod.is_special_input_language(0x0409))
+        self.assertFalse(input_method_mod.is_special_input_language(None))
+
+    def test_windows_detection_reads_foreground_window_thread_layout(self):
+        class FakeFunction:
+            def __init__(self, result):
+                self.result = result
+                self.calls = []
+                self.argtypes = None
+                self.restype = None
+
+            def __call__(self, *args):
+                self.calls.append(args)
+                return self.result
+
+        user32 = SimpleNamespace(
+            GetForegroundWindow=FakeFunction(100),
+            GetWindowThreadProcessId=FakeFunction(200),
+            GetKeyboardLayout=FakeFunction(0xE0200804),
+        )
+
+        with mock.patch.object(input_method_mod.platform, 'system', return_value='Windows'), \
+             mock.patch.object(input_method_mod.ctypes, 'WinDLL', return_value=user32, create=True):
+            language_id = input_method_mod.get_active_input_language_id()
+
+        self.assertEqual(language_id, 0x0804)
+        self.assertEqual(user32.GetWindowThreadProcessId.calls, [(100, None)])
+        self.assertEqual(user32.GetKeyboardLayout.calls, [(200,)])
+
+    def test_non_windows_detection_fails_open(self):
+        with mock.patch.object(input_method_mod.platform, 'system', return_value='Linux'):
+            self.assertFalse(input_method_mod.is_detection_supported())
+            self.assertIsNone(input_method_mod.get_active_input_language_id())
+            self.assertIsNone(input_method_mod.is_special_input_method_active())
+
+
+class TestSpecialInputMethodConfiguration(unittest.TestCase):
+    def test_legacy_override_setting_is_removed_on_startup(self):
+        loaded_config = {
+            **pinyin_live.DEFAULT_CONFIG,
+            'override_special_input_methods': True,
+        }
+
+        with mock.patch.object(
+            pinyin_live,
+            'load_config',
+            return_value=loaded_config,
+        ), mock.patch.object(
+            pinyin_live,
+            'save_config',
+        ) as fake_save, mock.patch.object(
+            pinyin_live.keyboard,
+            'Listener',
+        ):
+            app = pinyin_live.PinyinApp()
+
+        self.assertNotIn('override_special_input_methods', app.config)
+        self.assertNotIn(
+            'override_special_input_methods',
+            pinyin_live.DEFAULT_CONFIG,
+        )
+        fake_save.assert_called_once_with(pinyin_live.CONFIG_PATH, app.config)
+
+
+class TestTrayInputMethodState(unittest.TestCase):
+    def test_paused_active_icon_uses_yellow_badge(self):
+        image = tray_ui_mod.create_tray_image(True, paused=True)
+
+        self.assertEqual(image.getpixel((48, 48)), (245, 190, 35, 255))
+
+    def test_manual_inactive_state_remains_red_when_ime_is_active(self):
+        image = tray_ui_mod.create_tray_image(False, paused=True)
+
+        self.assertEqual(image.getpixel((48, 48)), (220, 50, 50, 255))
 
 
 class TestLiveReplacementFlow(unittest.TestCase):
@@ -192,6 +275,167 @@ class TestLiveReplacementFlow(unittest.TestCase):
 
         self.assertEqual(buffer_mod.BUFFER, list('hao'))
         self.assertEqual(toggled, [])
+
+    def test_special_input_method_blocks_conversion_and_clears_buffer(self):
+        app = object.__new__(pinyin_live.PinyinApp)
+        app.special_input_method_active = False
+        app.input_method_blocked = False
+        app.input_method_lock = pinyin_live.threading.RLock()
+        app.icon = None
+        pinyin_live.ACTIVE = True
+        buffer_mod.BUFFER[:] = list('hao')
+
+        with mock.patch.object(
+            input_method_mod,
+            'is_special_input_method_active',
+            return_value=True,
+        ):
+            app._on_type(SimpleNamespace(char='3'))
+
+        self.assertTrue(app.is_input_method_blocked())
+        self.assertEqual(buffer_mod.BUFFER, [])
+        self.assertNotIn(('press_backspace', 4), self.calls)
+
+    def test_keypress_cannot_unblock_a_protected_input_method(self):
+        app = object.__new__(pinyin_live.PinyinApp)
+        app.special_input_method_active = True
+        app.input_method_blocked = True
+        app.input_method_lock = pinyin_live.threading.RLock()
+        app._normal_input_method_observations = 0
+        app.icon = None
+        pinyin_live.ACTIVE = True
+        buffer_mod.BUFFER[:] = list('ni')
+
+        with mock.patch.object(
+            input_method_mod,
+            'is_special_input_method_active',
+            return_value=False,
+        ):
+            app._on_type(SimpleNamespace(char='1'))
+
+        self.assertTrue(app.is_input_method_blocked())
+        self.assertEqual(buffer_mod.BUFFER, list('ni'))
+        self.assertNotIn(('press_backspace', 3), self.calls)
+        self.assertNotIn(('copy', 'nī'), self.calls)
+
+    def test_unknown_layout_preserves_protected_state(self):
+        app = object.__new__(pinyin_live.PinyinApp)
+        app.special_input_method_active = True
+        app.input_method_blocked = True
+        app.input_method_lock = pinyin_live.threading.RLock()
+        app.icon = None
+
+        with mock.patch.object(
+            input_method_mod,
+            'is_special_input_method_active',
+            return_value=None,
+        ):
+            blocked = app.refresh_input_method_state()
+
+        self.assertTrue(blocked)
+        self.assertTrue(app.is_input_method_blocked())
+
+    def test_monitor_can_unblock_after_normal_layout_is_observed(self):
+        app = object.__new__(pinyin_live.PinyinApp)
+        app.special_input_method_active = True
+        app.input_method_blocked = True
+        app.input_method_lock = pinyin_live.threading.RLock()
+        app._normal_input_method_observations = 0
+        app.icon = None
+        buffer_mod.BUFFER[:] = list('ni')
+
+        with mock.patch.object(
+            input_method_mod,
+            'is_special_input_method_active',
+            return_value=False,
+        ):
+            first = app.refresh_input_method_state()
+            second = app.refresh_input_method_state()
+            blocked = app.refresh_input_method_state()
+
+        self.assertTrue(first)
+        self.assertTrue(second)
+        self.assertFalse(blocked)
+        self.assertFalse(app.is_input_method_blocked())
+        self.assertEqual(buffer_mod.BUFFER, [])
+
+    def test_keypresses_do_not_reset_monitor_unblock_confirmations(self):
+        app = object.__new__(pinyin_live.PinyinApp)
+        app.special_input_method_active = True
+        app.input_method_blocked = True
+        app.input_method_lock = pinyin_live.threading.RLock()
+        app._normal_input_method_observations = 0
+        app.icon = None
+        pinyin_live.ACTIVE = True
+        buffer_mod.BUFFER.clear()
+
+        with mock.patch.object(
+            input_method_mod,
+            'is_special_input_method_active',
+            return_value=False,
+        ):
+            self.assertTrue(app.refresh_input_method_state())
+            app._on_type(SimpleNamespace(char='n'))
+            self.assertEqual(app._normal_input_method_observations, 1)
+            self.assertTrue(app.refresh_input_method_state())
+            app._on_type(SimpleNamespace(char='i'))
+            self.assertEqual(app._normal_input_method_observations, 2)
+            self.assertFalse(app.refresh_input_method_state())
+
+        self.assertFalse(app.is_input_method_blocked())
+
+    def test_monitor_cannot_clear_buffer_during_conversion(self):
+        app = object.__new__(pinyin_live.PinyinApp)
+        app.special_input_method_active = False
+        app.input_method_blocked = False
+        app.input_method_lock = pinyin_live.threading.RLock()
+        app.icon = None
+        pinyin_live.ACTIVE = True
+        buffer_mod.BUFFER[:] = list('hao')
+        conversion_started = pinyin_live.threading.Event()
+        allow_conversion = pinyin_live.threading.Event()
+        monitor_started = pinyin_live.threading.Event()
+        monitor_done = pinyin_live.threading.Event()
+
+        def slow_conversion(_token):
+            conversion_started.set()
+            self.assertTrue(allow_conversion.wait(1.0))
+            return 'hǎo'
+
+        def refresh_from_monitor():
+            monitor_started.set()
+            app.refresh_input_method_state()
+            monitor_done.set()
+
+        with mock.patch.object(
+            input_method_mod,
+            'is_special_input_method_active',
+            side_effect=[False, True],
+        ), mock.patch.object(
+            buffer_mod,
+            'convert_pinyin_token',
+            side_effect=slow_conversion,
+        ):
+            typing_thread = pinyin_live.threading.Thread(
+                target=app._on_type,
+                args=(SimpleNamespace(char='3'),),
+            )
+            monitor_thread = pinyin_live.threading.Thread(
+                target=refresh_from_monitor,
+            )
+            typing_thread.start()
+            self.assertTrue(conversion_started.wait(1.0))
+            monitor_thread.start()
+            self.assertTrue(monitor_started.wait(1.0))
+            self.assertFalse(monitor_done.wait(0.05))
+            allow_conversion.set()
+            typing_thread.join(1.0)
+            monitor_thread.join(1.0)
+
+        self.assertFalse(typing_thread.is_alive())
+        self.assertFalse(monitor_thread.is_alive())
+        self.assertIn(('press_backspace', 4), self.calls)
+        self.assertTrue(app.is_input_method_blocked())
 
     def test_sequence_zhong1_guo2(self):
         outputs = []
@@ -569,10 +813,55 @@ class TestStartupFailureHandling(unittest.TestCase):
         app.icon = None
         app.request_update_check = mock.Mock()
 
-        with self.assertRaises(RuntimeError):
-            pinyin_live.PinyinApp.start(app)
+        with mock.patch.object(
+            input_method_mod,
+            'is_detection_supported',
+            return_value=False,
+        ):
+            with self.assertRaises(RuntimeError):
+                pinyin_live.PinyinApp.start(app)
 
         self.assertTrue(app.type_listener.started)
+        self.assertTrue(app.type_listener.stopped)
+        self.assertTrue(app.toggle_listener.stopped)
+        app.request_update_check.assert_not_called()
+
+    def test_start_stops_listeners_when_input_method_monitor_fails(self):
+        class FakeListener:
+            def __init__(self):
+                self.started = False
+                self.stopped = False
+
+            def start(self):
+                self.started = True
+
+            def stop(self):
+                self.stopped = True
+
+        app = object.__new__(pinyin_live.PinyinApp)
+        app.autostart_enabled = False
+        app.autostart_config = pinyin_live.build_autostart_config()
+        app.type_listener = FakeListener()
+        app.toggle_listener = FakeListener()
+        app.icon = None
+        app.input_method_monitor_stop = pinyin_live.threading.Event()
+        app.input_method_monitor_thread = None
+        app.refresh_input_method_state = mock.Mock(return_value=False)
+        app._start_input_method_monitor = mock.Mock(
+            side_effect=RuntimeError('monitor unavailable')
+        )
+        app.request_update_check = mock.Mock()
+
+        with mock.patch.object(
+            input_method_mod,
+            'is_detection_supported',
+            return_value=True,
+        ):
+            with self.assertRaises(RuntimeError):
+                pinyin_live.PinyinApp.start(app)
+
+        self.assertTrue(app.type_listener.started)
+        self.assertTrue(app.toggle_listener.started)
         self.assertTrue(app.type_listener.stopped)
         self.assertTrue(app.toggle_listener.stopped)
         app.request_update_check.assert_not_called()

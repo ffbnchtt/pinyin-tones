@@ -52,6 +52,7 @@ try:
     from pinyin_tones import clipboard as _clipboard
     from pinyin_tones import buffer as _buffer
     from pinyin_tones import autostart as _autostart
+    from pinyin_tones import input_method as _input_method
 
     # Re-export selected functions for backwards compatibility
     paste_text = _clipboard.paste_text
@@ -187,6 +188,7 @@ except ImportError:  # pragma: no cover - script execution fallback
     from version import __version__
     from paths import get_app_root, get_state_dir
     import update_check as _update_check
+    import input_method as _input_method
 
 
 # Paths
@@ -225,6 +227,8 @@ UPDATE_DIALOG_REQUESTED = threading.Event()
 STARTUP_ENABLED_DEFAULT = False
 UPDATE_CHECK_ENABLED_DEFAULT = True
 UPDATE_CHECK_INTERVAL_HOURS_DEFAULT = 24
+INPUT_METHOD_POLL_INTERVAL_SECONDS = 0.5
+INPUT_METHOD_UNBLOCK_CONFIRMATIONS = 3
 DEFAULT_CONFIG = {
     "hotkey": DEFAULT_HOTKEY,
     "autostart": STARTUP_ENABLED_DEFAULT,
@@ -412,10 +416,19 @@ class PinyinApp:
     def __init__(self):
         """Initialize app state and listeners."""
         self.config = load_config(CONFIG_PATH, DEFAULT_CONFIG)
+        if "override_special_input_methods" in self.config:
+            self.config.pop("override_special_input_methods")
+            save_config(CONFIG_PATH, self.config)
         self.hotkey = self.config.get("hotkey", DEFAULT_HOTKEY)
         self.autostart_enabled = bool(
             self.config.get("autostart", STARTUP_ENABLED_DEFAULT)
         )
+        self.special_input_method_active = False
+        self.input_method_blocked = False
+        self._normal_input_method_observations = 0
+        self.input_method_lock = threading.RLock()
+        self.input_method_monitor_stop = threading.Event()
+        self.input_method_monitor_thread: Optional[threading.Thread] = None
         self.hotkey_modifiers, self.hotkey_trigger = parse_hotkey(self.hotkey)
         self.type_listener: Optional[keyboard.Listener] = None
         self.toggle_listener: Optional[keyboard.Listener] = None
@@ -428,7 +441,7 @@ class PinyinApp:
 
     def _build_listeners(self):
         """Create global keyboard listeners."""
-        self.type_listener = keyboard.Listener(on_press=on_type)
+        self.type_listener = keyboard.Listener(on_press=self._on_type)
         self.toggle_listener = keyboard.Listener(
             on_press=self._toggle_on_press, on_release=self._toggle_on_release
         )
@@ -445,6 +458,9 @@ class PinyinApp:
             if self.toggle_listener:
                 logger.info("Starting hotkey listener")
                 self.toggle_listener.start()
+            self.refresh_input_method_state()
+            if _input_method.is_detection_supported():
+                self._start_input_method_monitor()
             self.request_update_check()
             threading.Thread(target=self._run_tray_safe, daemon=True).start()
         except Exception:
@@ -454,6 +470,24 @@ class PinyinApp:
 
     def stop(self):
         """Stop listeners and tray icon."""
+        input_method_monitor_stop = getattr(self, "input_method_monitor_stop", None)
+        if input_method_monitor_stop is not None:
+            input_method_monitor_stop.set()
+        input_method_monitor_thread = getattr(
+            self,
+            "input_method_monitor_thread",
+            None,
+        )
+        if (
+            input_method_monitor_thread is not None
+            and input_method_monitor_thread is not threading.current_thread()
+        ):
+            if input_method_monitor_thread.is_alive():
+                input_method_monitor_thread.join(
+                    timeout=INPUT_METHOD_POLL_INTERVAL_SECONDS + 0.1
+                )
+            if not input_method_monitor_thread.is_alive():
+                self.input_method_monitor_thread = None
         try:
             if self.toggle_listener:
                 self.toggle_listener.stop()
@@ -474,6 +508,95 @@ class PinyinApp:
         """Recompute hotkey modifiers and trigger from config."""
         self.hotkey_modifiers, self.hotkey_trigger = parse_hotkey(self.hotkey)
         logger.info(f"Hotkey updated to {self.hotkey}")
+
+    def _on_type(self, key):
+        """Apply input-method protection before handling a global keypress."""
+        with self.input_method_lock:
+            # Candidate windows can make foreground-layout detection transiently
+            # report a different or unavailable layout. A keypress may enable
+            # protection immediately, but only the monitor may disable it.
+            if self.refresh_input_method_state(allow_unblock=False):
+                return
+            on_type(key)
+
+    def _start_input_method_monitor(self) -> None:
+        """Watch layout changes so the tray state updates before the next keypress."""
+        if (
+            self.input_method_monitor_thread is not None
+            and self.input_method_monitor_thread.is_alive()
+        ):
+            return
+        self.input_method_monitor_stop.clear()
+        monitor_thread = threading.Thread(
+            target=self._monitor_input_method,
+            daemon=True,
+        )
+        monitor_thread.start()
+        self.input_method_monitor_thread = monitor_thread
+
+    def _monitor_input_method(self) -> None:
+        while not self.input_method_monitor_stop.wait(
+            INPUT_METHOD_POLL_INTERVAL_SECONDS
+        ):
+            self.refresh_input_method_state()
+
+    def refresh_input_method_state(self, allow_unblock: bool = True) -> bool:
+        """Refresh and return whether conversion is paused for the active IME."""
+        with self.input_method_lock:
+            previous_special_state = self.special_input_method_active
+            detected = _input_method.is_special_input_method_active()
+            if detected is None:
+                if allow_unblock:
+                    self._normal_input_method_observations = 0
+            elif detected:
+                self._normal_input_method_observations = 0
+                self.special_input_method_active = True
+            elif not self.special_input_method_active:
+                self._normal_input_method_observations = 0
+            elif allow_unblock:
+                self._normal_input_method_observations += 1
+                if (
+                    self._normal_input_method_observations
+                    >= INPUT_METHOD_UNBLOCK_CONFIRMATIONS
+                ):
+                    self._normal_input_method_observations = 0
+                    self.special_input_method_active = False
+
+            blocked = self.special_input_method_active
+            if (
+                blocked != self.input_method_blocked
+                or self.special_input_method_active != previous_special_state
+            ):
+                self.input_method_blocked = blocked
+                _buffer.reset_buffer()
+                self._refresh_tray_status()
+            return blocked
+
+    def is_input_method_blocked(self) -> bool:
+        with self.input_method_lock:
+            return self.input_method_blocked
+
+    def _refresh_tray_status(self) -> None:
+        if not self.icon:
+            return
+        self.icon.icon = create_tray_image(
+            self._is_active(),
+            paused=self.is_input_method_blocked(),
+        )
+        try:
+            self.icon.title = self._tray_title()
+        except Exception:
+            pass
+        if hasattr(self.icon, "update_menu"):
+            try:
+                self.icon.update_menu()
+            except Exception:
+                pass
+
+    def _tray_title(self) -> str:
+        if self._is_active() and self.is_input_method_blocked():
+            return f"{APP_NAME} v{APP_VERSION} — pausado por teclado especial"
+        return f"{APP_NAME} v{APP_VERSION}"
 
     def _save_config(self) -> None:
         save_config(CONFIG_PATH, self.config)
@@ -700,13 +823,7 @@ class PinyinApp:
             ACTIVE = not ACTIVE
             print("Modo Pinyin:", "ACTIVADO" if ACTIVE else "DESACTIVADO")
         logger.info(f"Toggled ACTIVE -> {ACTIVE}")
-        if self.icon:
-            self.icon.icon = create_tray_image(ACTIVE)
-            if hasattr(self.icon, "update_menu"):
-                try:
-                    self.icon.update_menu()
-                except Exception:
-                    pass
+        self._refresh_tray_status()
 
     def _is_active(self) -> bool:
         with ACTIVE_LOCK:
@@ -786,7 +903,10 @@ class PinyinApp:
 
     def _run_tray(self):
         """Run the system tray icon loop."""
-        image = create_tray_image(ACTIVE)
+        image = create_tray_image(
+            ACTIVE,
+            paused=self.is_input_method_blocked(),
+        )
         menu = pystray.Menu(
             pystray.MenuItem(self._app_info_label, lambda: None, enabled=False),
             pystray.Menu.SEPARATOR,
@@ -812,7 +932,7 @@ class PinyinApp:
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Salir", lambda: quit_app(self)),
         )
-        self.icon = pystray.Icon("pinyin", image, f"{APP_NAME} v{APP_VERSION}", menu)
+        self.icon = pystray.Icon("pinyin", image, self._tray_title(), menu)
         if self.icon:
             self.icon.run()
 

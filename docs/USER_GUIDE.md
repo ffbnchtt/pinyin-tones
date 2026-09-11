@@ -29,6 +29,8 @@ Abrí la ventana de configuración desde el ícono de la bandeja para cambiar:
 - el atajo global
 - si la aplicación inicia con el sistema operativo
 
+En Windows, al usar un método de entrada chino, japonés o coreano, Pinyin Tones se pausa automáticamente para que los números sigan seleccionando los candidatos del sistema. El indicador del ícono cambia de verde a amarillo durante esa pausa; vuelve a verde al regresar a un teclado compatible. Esta prioridad del teclado del sistema es permanente y no requiere configuración. Si desactivás Pinyin Tones manualmente, el indicador permanece rojo.
+
 La configuración se guarda en `config.json`. En Windows, si la carpeta del ejecutable no permite escritura, la ruta alternativa es `%LOCALAPPDATA%\Pinyin Tones`.
 
 ## Atajos recomendados
@@ -45,6 +47,7 @@ Evitá atajos que ya estén en uso por el sistema operativo u otras aplicaciones
 
 - Si el atajo no se activa, probá con otra letra.
 - Si la app no reemplaza el texto, aseguráte de que está activa desde el menú de la bandeja.
+- Si el indicador está amarillo, la conversión está pausada porque hay un método de entrada especial activo. Para volver a convertir pinyin, cambiá a un teclado que no use selección nativa de candidatos.
 - Si la opción de inicio automático falla, abrí nuevamente la ventana de configuración e intentá de nuevo.
 - Si no aparece el ícono en la bandeja, reiniciá la aplicación.
 - Si ejecutás la app desde una carpeta protegida o sincronizada y no guarda cambios, movela a una carpeta escribible o revisá la carpeta de datos del usuario.
