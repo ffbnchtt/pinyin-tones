@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Escribí pinyin con tonos en cualquier aplicación de escritorio.">
+    <title>Pinyin Tones — Escribí pinyin con tonos</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#inicio" aria-label="Pinyin Tones">Pinyin <span>Tones</span></a>
+      <nav aria-label="Navegación principal">
+        <a href="#descargar" data-es="Descargar" data-en="Download">Descargar</a>
+        <a href="#como-funciona" data-es="Cómo funciona" data-en="How it works">Cómo funciona</a>
+        <a href="https://github.com/ffbnchtt/pinyin-tones" data-es="Código" data-en="Source">Código</a>
+      </nav>
+      <button id="language-toggle" type="button" aria-label="Switch to English">EN</button>
+    </header>
+
+    <main id="inicio">
+      <section class="hero">
+        <div>
+          <p class="eyebrow" data-es="PARA ESCRIBIR CHINO CON FLUIDEZ" data-en="TYPE CHINESE FLUENTLY">PARA ESCRIBIR CHINO CON FLUIDEZ</p>
+          <h1 data-es="Escribí los tonos sin detenerte." data-en="Type tone marks without slowing down.">Escribí los tonos sin detenerte.</h1>
+          <p class="lead" data-es="Pinyin Tones transforma números de tono mientras escribís, en cualquier aplicación de escritorio." data-en="Pinyin Tones converts tone numbers as you type, in any desktop application.">Pinyin Tones transforma números de tono mientras escribís, en cualquier aplicación de escritorio.</p>
+          <a class="button primary" id="recommended-download" href="#descargar" data-es="Ver descargas" data-en="See downloads">Ver descargas</a>
+          <p class="recommendation" id="os-recommendation" aria-live="polite"></p>
+        </div>
+        <div class="conversion-card" aria-label="Ejemplo de conversión de tonos">
+          <p data-es="ESCRIBÍ" data-en="TYPE">ESCRIBÍ</p>
+          <code>nǐ hǎo</code>
+          <div class="conversion-row"><span>ni3 hao3</span><span aria-hidden="true">→</span><strong>nǐ hǎo</strong></div>
+          <p class="card-note" data-es="La app reemplaza cada sílaba automáticamente." data-en="The app replaces each syllable automatically.">La app reemplaza cada sílaba automáticamente.</p>
+        </div>
+      </section>
+
+      <section id="descargar" class="downloads" aria-labelledby="downloads-title">
+        <p class="eyebrow" data-es="DESCARGAS" data-en="DOWNLOADS">DESCARGAS</p>
+        <h2 id="downloads-title" data-es="Elegí tu sistema operativo" data-en="Choose your operating system">Elegí tu sistema operativo</h2>
+        <div class="download-grid">
+          <article class="download-card" data-platform="windows">
+            <h3>Windows</h3>
+            <p data-es="Versión portable para descomprimir y ejecutar." data-en="Portable version: unzip and run.">Versión portable para descomprimir y ejecutar.</p>
+            <a class="button secondary" href="https://github.com/ffbnchtt/pinyin-tones/releases/latest/download/pinyin-tones-windows.zip" data-es="Descargar ZIP" data-en="Download ZIP">Descargar ZIP</a>
+          </article>
+          <article class="download-card" data-platform="macos">
+            <h3>macOS</h3>
+            <p data-es="Instalador recomendado: abrí el DMG y arrastrá la app a Aplicaciones." data-en="Recommended installer: open the DMG and drag the app to Applications.">Instalador recomendado: abrí el DMG y arrastrá la app a Aplicaciones.</p>
+            <div class="button-stack">
+              <a class="button secondary" href="https://github.com/ffbnchtt/pinyin-tones/releases/latest/download/pinyin-tones-macos-arm64.dmg" data-es="Apple Silicon (M1/M2/M3/M4)" data-en="Apple Silicon (M1/M2/M3/M4)">Apple Silicon (M1/M2/M3/M4)</a>
+              <a class="button text-link" href="https://github.com/ffbnchtt/pinyin-tones/releases/latest/download/pinyin-tones-macos-x64.dmg" data-es="Mac Intel" data-en="Intel Mac">Mac Intel</a>
+              <a class="button text-link" href="https://github.com/ffbnchtt/pinyin-tones/releases/latest/download/pinyin-tones-macos.zip" data-es="ZIP portable (ambas arquitecturas)" data-en="Portable ZIP (both architectures)">ZIP portable (ambas arquitecturas)</a>
+            </div>
+          </article>
+          <article class="download-card" data-platform="linux">
+            <h3>Linux</h3>
+            <p data-es="Para Ubuntu/Debian usá el instalador DEB; AppImage no requiere instalación." data-en="Use the DEB installer on Ubuntu/Debian; AppImage needs no installation.">Para Ubuntu/Debian usá el instalador DEB; AppImage no requiere instalación.</p>
+            <div class="button-stack">
+              <a class="button secondary" href="https://github.com/ffbnchtt/pinyin-tones/releases/latest/download/pinyin-tones-linux-amd64.deb" data-es="Instalador DEB" data-en="DEB installer">Instalador DEB</a>
+              <a class="button text-link" href="https://github.com/ffbnchtt/pinyin-tones/releases/latest/download/pinyin-tones-linux-x86_64.AppImage">AppImage portable</a>
+              <a class="button text-link" href="https://github.com/ffbnchtt/pinyin-tones/releases/latest/download/pinyin-tones-linux.zip" data-es="ZIP portable" data-en="Portable ZIP">ZIP portable</a>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="como-funciona" class="how-it-works" aria-labelledby="how-title">
+        <div>
+          <p class="eyebrow" data-es="USO SIMPLE" data-en="SIMPLE TO USE">USO SIMPLE</p>
+          <h2 id="how-title" data-es="Tres pasos, sin copiar y pegar" data-en="Three steps, no copy and paste">Tres pasos, sin copiar y pegar</h2>
+        </div>
+        <ol>
+          <li><strong>01</strong><span data-es="Abrí Pinyin Tones desde la bandeja del sistema." data-en="Open Pinyin Tones from the system tray.">Abrí Pinyin Tones desde la bandeja del sistema.</span></li>
+          <li><strong>02</strong><span data-es="Escribí una sílaba y su número de tono, por ejemplo `zhong1`." data-en="Type a syllable and its tone number, for example `zhong1`.">Escribí una sílaba y su número de tono, por ejemplo `zhong1`.</span></li>
+          <li><strong>03</strong><span data-es="La app la reemplaza por `zhōng` en la aplicación activa." data-en="The app replaces it with `zhōng` in your active application.">La app la reemplaza por `zhōng` en la aplicación activa.</span></li>
+        </ol>
+      </section>
+
+      <section class="notes" aria-labelledby="notes-title">
+        <h2 id="notes-title" data-es="Antes de instalar" data-en="Before installing">Antes de instalar</h2>
+        <div class="notes-grid">
+          <p><strong>macOS</strong><span data-es="Concedé Accesibilidad y, si macOS lo solicita, Input Monitoring." data-en="Grant Accessibility and, if macOS asks, Input Monitoring.">Concedé Accesibilidad y, si macOS lo solicita, Input Monitoring.</span></p>
+          <p><strong>Linux</strong><span data-es="Funciona mejor en X11. Wayland puede limitar el teclado global o la bandeja." data-en="Works best on X11. Wayland can limit global keyboard access or the tray.">Funciona mejor en X11. Wayland puede limitar el teclado global o la bandeja.</span></p>
+          <p><strong>Integridad</strong><span><a href="https://github.com/ffbnchtt/pinyin-tones/releases/latest/download/SHA256SUMS.txt" data-es="Verificá SHA256SUMS" data-en="Verify SHA256SUMS">Verificá SHA256SUMS</a> · <a href="https://github.com/ffbnchtt/pinyin-tones/releases/latest" data-es="Notas de versión" data-en="Release notes">Notas de versión</a></span></p>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>© Pinyin Tones</span>
+      <a href="https://github.com/ffbnchtt/pinyin-tones">GitHub</a>
+      <a href="https://github.com/ffbnchtt/pinyin-tones/blob/main/LICENSE">MIT</a>
+    </footer>
+    <script src="app.js"></script>
+  </body>
+</html>

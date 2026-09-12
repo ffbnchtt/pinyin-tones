@@ -15,6 +15,7 @@ suite.addTests(loader.loadTestsFromName('tests.test_build_release'))
 suite.addTests(loader.loadTestsFromName('tests.test_dev_entrypoint'))
 suite.addTests(loader.loadTestsFromName('tests.test_config_store'))
 suite.addTests(loader.loadTestsFromName('tests.test_paths'))
+suite.addTests(loader.loadTestsFromName('tests.test_site'))
 runner = unittest.TextTestRunner(verbosity=2)
 res = runner.run(suite)
 if not res.wasSuccessful():

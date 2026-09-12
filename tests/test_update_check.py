@@ -56,6 +56,11 @@ class TestVersionHelpers(unittest.TestCase):
 
 
 class TestUpdateCheckHelpers(unittest.TestCase):
+    def test_current_architecture_maps_apple_silicon_and_x64(self):
+        self.assertEqual(update_check.current_architecture('arm64'), 'arm64')
+        self.assertEqual(update_check.current_architecture('aarch64'), 'arm64')
+        self.assertEqual(update_check.current_architecture('x86_64'), 'x64')
+
     def test_select_release_asset_by_platform(self):
         assets = [
             {"name": "pinyin-tones-windows.zip", "browser_download_url": "https://example/windows"},
@@ -73,6 +78,25 @@ class TestUpdateCheckHelpers(unittest.TestCase):
         self.assertEqual(
             update_check.select_release_asset(assets, "Linux"),
             ("pinyin-tones-linux.zip", "https://example/linux"),
+        )
+
+    def test_select_release_asset_prefers_matching_macos_architecture_then_legacy_zip(self):
+        assets = [
+            {"name": "pinyin-tones-macos.zip", "browser_download_url": "https://example/legacy"},
+            {"name": "pinyin-tones-macos-arm64.zip", "browser_download_url": "https://example/arm64"},
+            {"name": "pinyin-tones-macos-x64.zip", "browser_download_url": "https://example/x64"},
+        ]
+        self.assertEqual(
+            update_check.select_release_asset(assets, "Darwin", "arm64"),
+            ("pinyin-tones-macos-arm64.zip", "https://example/arm64"),
+        )
+        self.assertEqual(
+            update_check.select_release_asset(assets, "Darwin", "x86_64"),
+            ("pinyin-tones-macos-x64.zip", "https://example/x64"),
+        )
+        self.assertEqual(
+            update_check.select_release_asset(assets[:1], "Darwin", "arm64"),
+            ("pinyin-tones-macos.zip", "https://example/legacy"),
         )
 
     def test_parse_release_info_handles_missing_asset(self):

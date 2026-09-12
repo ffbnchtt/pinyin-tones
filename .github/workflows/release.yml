@@ -1,0 +1,111 @@
+name: Draft release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows
+            arch: x64
+            os: windows-latest
+            formats: portable
+          - platform: macos
+            arch: x64
+            os: macos-15-intel
+            formats: portable,dmg
+          - platform: macos
+            arch: arm64
+            os: macos-latest
+            formats: portable,dmg
+          - platform: linux
+            arch: x64
+            os: ubuntu-22.04
+            formats: portable,appimage,deb
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify tag version
+        shell: bash
+        run: |
+          expected="${GITHUB_REF_NAME#v}"
+          project_version="$(python -c "from tools.build_release import project_version; print(project_version())")"
+          runtime_version="$(python -c "import sys; sys.path.insert(0, 'src'); from pinyin_tones.version import __version__; print(__version__)")"
+          test "$expected" = "$project_version"
+          test "$expected" = "$runtime_version"
+      - name: Install build dependencies
+        run: python -m pip install -e ".[dev]"
+      - name: Install Linux packaging tools
+        if: matrix.platform == 'linux'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y desktop-file-utils dpkg-dev
+          curl -fL --retry 3 -o "$RUNNER_TEMP/appimagetool" \
+            https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x "$RUNNER_TEMP/appimagetool"
+      - name: Build unsigned portable macOS payload
+        if: matrix.platform == 'macos'
+        run: python tools/build_release.py --platform macos --arch ${{ matrix.arch }} --formats portable
+      - name: Sign and notarize macOS artifacts
+        if: matrix.platform == 'macos'
+        shell: bash
+        env:
+          MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+          APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+        run: bash packaging/macos/sign_and_notarize.sh ${{ matrix.arch }}
+      - name: Build Windows or Linux artifacts
+        if: matrix.platform != 'macos'
+        shell: bash
+        env:
+          APPIMAGETOOL: ${{ runner.temp }}/appimagetool
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+        run: python tools/build_release.py --platform ${{ matrix.platform }} --arch ${{ matrix.arch }} --formats ${{ matrix.formats }}
+      - name: Validate Linux packages
+        if: matrix.platform == 'linux'
+        shell: bash
+        run: |
+          desktop-file-validate packaging/linux/pinyin-tones.desktop
+          dpkg-deb --info dist/pinyin-tones-linux-amd64.deb
+          APPIMAGE_EXTRACT_AND_RUN=1 dist/pinyin-tones-linux-x86_64.AppImage --appimage-extract >/dev/null
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.platform }}-${{ matrix.arch }}
+          path: dist/pinyin-tones-*
+          if-no-files-found: error
+
+  draft:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+      - name: Build legacy macOS compatibility archive and checksums
+        shell: bash
+        run: |
+          mkdir -p legacy-macos/arm64 legacy-macos/x64
+          unzip -q release/pinyin-tones-macos-arm64.zip -d legacy-macos/arm64
+          unzip -q release/pinyin-tones-macos-x64.zip -d legacy-macos/x64
+          (cd legacy-macos && zip -qr ../release/pinyin-tones-macos.zip .)
+          (cd release && sha256sum pinyin-tones-* > SHA256SUMS.txt)
+      - name: Create draft GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: gh release create "${GITHUB_REF_NAME}" release/* --draft --title "${GITHUB_REF_NAME}" --generate-notes

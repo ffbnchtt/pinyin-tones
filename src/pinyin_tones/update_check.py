@@ -32,6 +32,14 @@ DOWNLOAD_ASSET_NAMES = {
 }
 
 
+def current_architecture(machine_name: str | None = None) -> str:
+    """Map runtime CPU names to the architecture labels used by release assets."""
+    name = (machine_name or platform.machine()).strip().lower()
+    if name in {'arm64', 'aarch64'}:
+        return 'arm64'
+    return 'x64'
+
+
 @dataclass(frozen=True)
 class ReleaseInfo:
     version: str
@@ -81,28 +89,44 @@ def build_request(url: str) -> urllib.request.Request:
 def select_release_asset(
     assets: list[dict[str, Any]],
     platform_name: str | None = None,
+    machine_name: str | None = None,
 ) -> tuple[Optional[str], Optional[str]]:
-    """Pick the expected asset name/url for the current platform."""
-    expected_name = DOWNLOAD_ASSET_NAMES[current_platform_slug(platform_name)]
-    for asset in assets:
-        name = str(asset.get("name", "")).strip()
-        if name.lower() != expected_name.lower():
-            continue
-        url = asset.get("browser_download_url")
-        if not url:
-            continue
-        return name, str(url)
+    """Pick the portable archive for the current platform and architecture.
+
+    Older releases expose a single macOS ZIP. Keep it as a fallback so the
+    updater remains compatible while separate Intel and Apple Silicon builds
+    are introduced.
+    """
+    platform_slug = current_platform_slug(platform_name)
+    expected_names = [DOWNLOAD_ASSET_NAMES[platform_slug]]
+    if platform_slug == 'macos':
+        architecture = current_architecture(machine_name)
+        expected_names.insert(0, f'pinyin-tones-macos-{architecture}.zip')
+    for expected_name in expected_names:
+        for asset in assets:
+            name = str(asset.get("name", "")).strip()
+            if name.lower() != expected_name.lower():
+                continue
+            url = asset.get("browser_download_url")
+            if url:
+                return name, str(url)
     return None, None
 
 
-def parse_release_info(payload: dict[str, Any], platform_name: str | None = None) -> Optional[ReleaseInfo]:
+def parse_release_info(
+    payload: dict[str, Any],
+    platform_name: str | None = None,
+    machine_name: str | None = None,
+) -> Optional[ReleaseInfo]:
     """Parse GitHub release JSON into a compact release object."""
     tag = str(payload.get("tag_name", "")).strip()
     html_url = str(payload.get("html_url", "")).strip()
     version = normalize_version(tag)
     if not version or not html_url:
         return None
-    asset_name, asset_url = select_release_asset(payload.get("assets") or [], platform_name)
+    asset_name, asset_url = select_release_asset(
+        payload.get("assets") or [], platform_name, machine_name
+    )
     return ReleaseInfo(
         version=version,
         tag=tag,

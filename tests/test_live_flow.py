@@ -441,6 +441,17 @@ class TestAutostartHelpers(unittest.TestCase):
             args = pinyin_live.get_launch_command_args()
         self.assertEqual(args, [pinyin_live.os.path.abspath(pinyin_live.sys.executable)])
 
+    def test_linux_appimage_autostart_uses_original_appimage_path(self):
+        config = pinyin_live.build_autostart_config()
+        with mock.patch.object(pinyin_live._autostart.platform, 'system', return_value='Linux'), \
+             mock.patch.dict(pinyin_live._autostart.os.environ, {'APPIMAGE': '/home/user/PinyinTones.AppImage'}, clear=False), \
+             mock.patch.object(pinyin_live.sys, 'frozen', True, create=True):
+            args = pinyin_live._autostart.get_launch_command_args(config)
+            target = pinyin_live._autostart.get_autostart_target_path(config)
+
+        self.assertEqual(args, ['/home/user/PinyinTones.AppImage'])
+        self.assertEqual(target, '/home/user/PinyinTones.AppImage')
+
     def test_build_linux_desktop_entry_uses_exec_line(self):
         with mock.patch.object(pinyin_live, 'get_launch_command_args', return_value=['/opt/pinyin/pinyin_tones', '--flag']):
             desktop_entry = pinyin_live.build_linux_desktop_entry()

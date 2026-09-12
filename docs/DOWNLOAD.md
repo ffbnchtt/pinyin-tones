@@ -2,7 +2,13 @@
 
 ## Para usuarios
 
-Si solo querés usar la aplicación, el proyecto está pensado para empaquetarse con PyInstaller en un ejecutable independiente. La ventana de configuración incluye una opción para iniciar la aplicación automáticamente con el sistema operativo.
+Las releases ofrecen una variante portable y, cuando corresponde, una variante instalable:
+
+- Windows: `pinyin-tones-windows.zip`.
+- macOS: DMG firmado para Apple Silicon o Intel; también ZIPs portables.
+- Linux x64: `pinyin-tones-linux-amd64.deb` para Ubuntu/Debian, AppImage portable y ZIP portable.
+
+La ventana de configuración incluye una opción para iniciar la aplicación automáticamente con el sistema operativo. En AppImage, la app guarda la ruta del archivo AppImage original para que el inicio automático persista después de cerrar sesión.
 
 ## Para desarrolladores
 
@@ -35,18 +41,18 @@ El comando genera la carpeta `dist\pinyin_tones_release\windows` y el zip listo 
 macOS:
 
 ```bash
-python3 tools/build_release.py --platform macos
+python3 tools/build_release.py --platform macos --arch arm64 --formats portable,dmg
 ```
 
-Genera `dist/pinyin-tones-macos.zip`.
+Genera los assets portables e instalables para Apple Silicon. Usá `--arch x64` en una Mac Intel.
 
 Linux:
 
 ```bash
-python3 tools/build_release.py --platform linux
+APPIMAGETOOL=/ruta/a/appimagetool python3 tools/build_release.py --platform linux --arch x64 --formats portable,appimage,deb
 ```
 
-Genera `dist/pinyin-tones-linux.zip`.
+Genera ZIP, AppImage y DEB para Linux x64.
 
 Ejemplos directos con PyInstaller (solo si necesitas personalizar):
 
@@ -79,3 +85,7 @@ pyinstaller --onefile --noconsole --name pinyin_tones --paths src --hidden-impor
 - Windows escribe una entrada en `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`.
 - macOS escribe un `LaunchAgent` plist en `~/Library/LaunchAgents`.
 - Linux escribe un archivo desktop en `~/.config/autostart`.
+
+## Publicar una release
+
+Crear un tag SemVer `vX.Y.Z` que coincida con `pyproject.toml` y `src/pinyin_tones/version.py` inicia el workflow de release. El workflow crea un borrador con los assets y `SHA256SUMS.txt`; publicalo sólo después de probar Windows, Mac Intel, Apple Silicon y Ubuntu con X11.

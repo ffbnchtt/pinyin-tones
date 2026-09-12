@@ -10,8 +10,8 @@ Conversión de notación de tonos numérica (`ni3`) en marcas diacríticas está
 
 ## Inicio rápido
 
-1. Descargá la versión para tu sistema desde la página de [releases](https://github.com/ffbnchtt/pinyin-tones/releases). Cada release incluye tres paquetes `.zip` (Windows, macOS, Linux).
-2. Descomprimí y ejecutá la aplicación; vas a ver el ícono en la bandeja del sistema.
+1. Descargá la versión para tu sistema desde la [web de descargas](https://ffbnchtt.github.io/pinyin-tones/) o desde [releases](https://github.com/ffbnchtt/pinyin-tones/releases).
+2. Usá el DMG en macOS, el DEB o AppImage en Linux, o el ZIP portable; vas a ver el ícono en la bandeja del sistema.
 
 Si preferís ejecutar desde la fuente (desarrollo):
 
@@ -46,10 +46,10 @@ pip install -e ".[dev]"
 Para generar un paquete local:
 
 ```bash
-python tools/build_release.py --platform windows
+python tools/build_release.py --platform windows --arch x64 --formats portable
 ```
 
-Reemplazá `windows` por `macos` o `linux` según corresponda. El comando genera una carpeta de payload en `dist/pinyin_tones_release/` y un `.zip`.
+Reemplazá la plataforma y elegí los formatos soportados: macOS usa `portable,dmg` y Linux `portable,appimage,deb`. Los builds deben ejecutarse en el sistema y arquitectura de destino.
 
 ## Uso básico
 
@@ -60,7 +60,7 @@ Reemplazá `windows` por `macos` o `linux` según corresponda. El comando genera
 
 - Windows: debería funcionar sin pasos extra en la mayoría de las instalaciones de escritorio.
 - macOS: la app necesita permisos de `Accesibilidad` y, según la versión del sistema, también `Input Monitoring` para escuchar el teclado global e inyectar el reemplazo en la app enfocada.
-- Linux: funciona mejor en sesiones `X11`; en `Wayland` la captura global y la inyección de teclado pueden estar limitadas por el compositor o directamente bloqueadas.
+- Linux: soportado inicialmente en Ubuntu 22.04+ x64 y funciona mejor en sesiones `X11`; en `Wayland` la captura global y la inyección de teclado pueden estar limitadas por el compositor o directamente bloqueadas.
 
 Si la app parece iniciarse pero no detecta teclas o no reemplaza texto, revisá primero esos permisos del sistema.
 
