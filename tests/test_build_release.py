@@ -13,6 +13,39 @@ class TestBuildReleaseHelpers(unittest.TestCase):
         self.assertEqual(build_release.normalize_platform_name('Windows'), 'windows')
         self.assertEqual(build_release.normalize_platform_name('Linux'), 'linux')
 
+    def test_normalize_architecture_maps_common_machine_names(self):
+        self.assertEqual(build_release.normalize_architecture('AMD64'), 'x64')
+        self.assertEqual(build_release.normalize_architecture('x86_64'), 'x64')
+        self.assertEqual(build_release.normalize_architecture('aarch64'), 'arm64')
+
+    def test_parse_formats_defaults_and_rejects_incompatible_format(self):
+        self.assertEqual(build_release.parse_formats('linux'), ('portable', 'appimage', 'deb'))
+        self.assertEqual(build_release.parse_formats('macos', 'portable,dmg'), ('portable', 'dmg'))
+        with self.assertRaises(ValueError):
+            build_release.parse_formats('windows', 'dmg')
+
+    def test_release_asset_names_are_stable_by_platform_architecture_and_format(self):
+        self.assertEqual(
+            build_release.release_asset_name('windows', 'x64', 'portable'),
+            'pinyin-tones-windows.zip',
+        )
+        self.assertEqual(
+            build_release.release_asset_name('macos', 'arm64', 'portable'),
+            'pinyin-tones-macos-arm64.zip',
+        )
+        self.assertEqual(
+            build_release.release_asset_name('macos', 'x64', 'dmg'),
+            'pinyin-tones-macos-x64.dmg',
+        )
+        self.assertEqual(
+            build_release.release_asset_name('linux', 'x64', 'appimage'),
+            'pinyin-tones-linux-x86_64.AppImage',
+        )
+        self.assertEqual(
+            build_release.release_asset_name('linux', 'x64', 'deb'),
+            'pinyin-tones-linux-amd64.deb',
+        )
+
     def test_build_pyinstaller_command_windows_uses_ico(self):
         icon_assets = {'ico': Path('C:/tmp/pinyin_tones.ico'), 'icns': Path('C:/tmp/pinyin_tones.icns'), 'png': Path('C:/tmp/pinyin_tones.png')}
         with mock.patch.object(build_release, 'build_windows_tk_options', return_value=['--tk-options']):
@@ -29,6 +62,12 @@ class TestBuildReleaseHelpers(unittest.TestCase):
         self.assertIn('--windowed', command)
         self.assertIn('pinyin_tones', command)
         self.assertIn(str(icon_assets['icns']), command)
+
+    def test_build_pyinstaller_command_macos_targets_requested_architecture(self):
+        icon_assets = {'ico': Path('C:/tmp/pinyin_tones.ico'), 'icns': Path('C:/tmp/pinyin_tones.icns'), 'png': Path('C:/tmp/pinyin_tones.png')}
+        command = build_release.build_pyinstaller_command('macos', icon_assets, 'arm64')
+        self.assertIn('--target-architecture', command)
+        self.assertIn('arm64', command)
 
     def test_build_pyinstaller_command_linux_has_no_icon_flag(self):
         icon_assets = {'ico': Path('C:/tmp/pinyin_tones.ico'), 'icns': Path('C:/tmp/pinyin_tones.icns'), 'png': Path('C:/tmp/pinyin_tones.png')}
@@ -160,6 +199,26 @@ class TestBuildReleaseHelpers(unittest.TestCase):
     def test_create_release_archive_rejects_unsupported_platform(self):
         with self.assertRaises(ValueError):
             build_release.create_release_archive('freebsd', Path('release'))
+
+    def test_create_checksum_file_is_sorted_and_uses_sha256(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            alpha = temp_path / 'alpha.zip'
+            beta = temp_path / 'beta.zip'
+            alpha.write_bytes(b'alpha')
+            beta.write_bytes(b'beta')
+            checksum_path = build_release.create_checksum_file([beta, alpha], temp_path / 'SHA256SUMS.txt')
+
+            lines = checksum_path.read_text(encoding='utf-8').splitlines()
+            self.assertEqual(len(lines), 2)
+            self.assertTrue(lines[0].endswith('  alpha.zip'))
+            self.assertTrue(lines[1].endswith('  beta.zip'))
+
+    def test_linux_desktop_entry_contains_package_metadata(self):
+        desktop_entry = build_release.linux_desktop_entry()
+        self.assertIn('Name=Pinyin Tones', desktop_entry)
+        self.assertIn('Exec=pinyin-tones', desktop_entry)
+        self.assertIn('X-AppImage-Version=1.0.0', desktop_entry)
 
     def test_build_windows_tk_options_includes_tkinter_runtime_files(self):
         with tempfile.TemporaryDirectory() as temp_dir:

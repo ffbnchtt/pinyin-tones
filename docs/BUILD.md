@@ -18,7 +18,11 @@ Si también vas a compilar ejecutables:
 pip install -e ".[dev]"
 ```
 
-Compilación con el script de release (recomendado):
+## Releases nativos
+
+PyInstaller genera binarios para el sistema y arquitectura donde se ejecuta. Compilá Windows en Windows, macOS Intel en un runner Intel, macOS Apple Silicon en ARM y Linux x64 en Linux x64.
+
+Compilación con el script de release:
 
 Windows:
 
@@ -26,23 +30,25 @@ Windows:
 python tools\build_release.py --platform windows
 ```
 
-Genera la carpeta `dist\pinyin_tones_release\windows` y el asset listo para GitHub Releases: `dist\pinyin-tones-windows.zip`. El zip guarda los archivos directamente en la raíz del archivo para que al extraerlo quede una sola carpeta.
+Genera `dist\pinyin-tones-windows.zip`.
 
 macOS:
 
 ```bash
-python3 tools/build_release.py --platform macos
+python3 tools/build_release.py --platform macos --arch arm64 --formats portable,dmg
 ```
 
-Genera `dist/pinyin-tones-macos.zip`.
+Reemplazá `arm64` por `x64` para Mac Intel. Genera un ZIP portable y un DMG; los nombres incluyen la arquitectura.
 
 Linux:
 
 ```bash
-python3 tools/build_release.py --platform linux
+APPIMAGETOOL=/ruta/a/appimagetool python3 tools/build_release.py --platform linux --arch x64 --formats portable,appimage,deb
 ```
 
-Genera `dist/pinyin-tones-linux.zip`.
+Genera `pinyin-tones-linux.zip`, AppImage y DEB. Para el DEB se necesita `dpkg-deb`; para AppImage, `appimagetool`.
+
+`--formats` acepta `portable`, `dmg`, `appimage` y `deb` según la plataforma. Sin ese argumento se crean todos los formatos soportados en el sistema actual.
 
 Compilación directa con PyInstaller (ejemplos):
 
@@ -65,5 +71,5 @@ pyinstaller --onefile --noconsole --name pinyin_tones --paths src --hidden-impor
 ```
 
 Permisos especiales:
-- macOS: conceder Accesibilidad y Grabación de pantalla.
-- Linux/Wayland: pynput puede no funcionar; usar X11 o alternativas.
+- macOS: conceder Accesibilidad y, si el sistema lo solicita, Input Monitoring. Las releases públicas requieren firma Developer ID y notarización.
+- Linux: la primera matriz soportada es Ubuntu 22.04+ x64 con X11. En Wayland, pynput puede no recibir el teclado global o sólo operar mediante Xwayland.

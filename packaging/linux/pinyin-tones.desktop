@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Pinyin Tones
+Comment=Convert pinyin tone numbers while you type
+Exec=pinyin-tones
+Icon=pinyin-tones
+Type=Application
+Categories=Utility;Education;
+Terminal=false
+X-AppImage-Name=Pinyin Tones
+X-AppImage-Version={version}
+X-AppImage-Arch=x86_64

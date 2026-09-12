@@ -83,7 +83,7 @@ try:
 
     def _get_autostart_target_path() -> str:
         if getattr(sys, "frozen", False):
-            return os.path.abspath(sys.executable)
+            return _autostart.get_frozen_launch_path()
         return os.path.abspath(os.path.join(ROOT_DIR, SCRIPT_REL_PATH))
 
     def _get_autostart_test_flag() -> str:

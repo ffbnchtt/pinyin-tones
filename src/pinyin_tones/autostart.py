@@ -33,11 +33,26 @@ class AutostartConfig:
     script_rel_path: str = 'pinyin_live.py'
 
 
+def get_frozen_launch_path() -> str:
+    """Return a persistent launcher path for frozen installations.
+
+    AppImage exposes its original file through ``APPIMAGE`` while
+    ``sys.executable`` points at a temporary mount. Persisting that temporary
+    path would make Linux autostart fail after logout.
+    """
+    appimage_path = os.environ.get('APPIMAGE')
+    if platform.system() == 'Linux' and appimage_path:
+        # AppImage documents this as the original absolute file path. Do not
+        # normalize it with the host platform's path rules in tests/tools.
+        return appimage_path
+    return os.path.abspath(sys.executable)
+
+
 def get_launch_command_args(config: AutostartConfig) -> List[str]:
     """Return the command used to launch the app in the current environment."""
     script_path = os.path.abspath(os.path.join(config.root_dir, config.script_rel_path))
     if getattr(sys, 'frozen', False):
-        return [os.path.abspath(sys.executable)]
+        return [get_frozen_launch_path()]
     return [os.path.abspath(sys.executable), script_path]
 
 
@@ -49,7 +64,7 @@ def get_launch_command_string(config: AutostartConfig) -> str:
 def get_autostart_target_path(config: AutostartConfig) -> str:
     """Return the path to verify when starting from autostart."""
     if getattr(sys, 'frozen', False):
-        return os.path.abspath(sys.executable)
+        return get_frozen_launch_path()
     return os.path.abspath(os.path.join(config.root_dir, config.script_rel_path))
 
 

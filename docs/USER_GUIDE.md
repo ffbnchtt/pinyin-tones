@@ -4,7 +4,7 @@
 
 Pinyin Tones convierte sílabas de pinyin con número de tono, como `ni3` o `hao3`, en pinyin con marcas de tono: `nǐ`, `hǎo`.
 
-Esta aplicación es portable: no requiere instalación. La app intenta guardar configuración, logs y descargas de actualizaciones en la carpeta donde la ejecutás; si esa carpeta no es escribible, usa una carpeta de datos del usuario.
+La aplicación puede usarse como portable o instalarse según el sistema. La app intenta guardar configuración, logs y descargas de actualizaciones en la carpeta donde la ejecutás; si esa carpeta no es escribible, usa una carpeta de datos del usuario.
 
 ## Uso básico
 
@@ -58,7 +58,10 @@ Antes de borrar la carpeta, abrí la configuración y desactivá "Iniciar con el
 Si borrás la carpeta sin desactivar esa opción, el sistema intentará iniciar la app en el próximo inicio de sesión.
 
 1. Desactivá el inicio automático desde la configuración.
-2. Borrá la carpeta donde descomprimiste la aplicación.
+2. Según el formato usado:
+   - ZIP o AppImage: borrá el archivo o carpeta descargada.
+   - macOS DMG: borrá `Pinyin Tones.app` desde Aplicaciones.
+   - Linux DEB: ejecutá `sudo apt remove pinyin-tones`.
 
 ## Archivos incluidos en un release
 
