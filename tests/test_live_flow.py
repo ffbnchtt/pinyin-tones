@@ -157,9 +157,10 @@ class TestLiveReplacementFlow(unittest.TestCase):
         self.assertEqual(buffer_mod.BUFFER, [])
         self.assertEqual(self.calls[0], ('press_backspace', 4))
         self.assertIn(('copy', 'hǎo'), self.calls)
-        self.assertIn(('keyDown', 'ctrl'), self.calls)
+        modifier = 'command' if keyboard_output_mod.platform.system() == 'Darwin' else 'ctrl'
+        self.assertIn(('keyDown', modifier), self.calls)
         self.assertIn(('press', 'v'), self.calls)
-        self.assertIn(('keyUp', 'ctrl'), self.calls)
+        self.assertIn(('keyUp', modifier), self.calls)
 
     def test_delete_last_token_uses_word_delete(self):
         pinyin_live.delete_last_token()

@@ -8,7 +8,7 @@ from pinyin_tones import paths
 
 class TestRuntimePaths(unittest.TestCase):
     def test_get_app_root_uses_executable_dir_when_frozen(self):
-        executable = "C:/Apps/Pinyin/pinyin_tones.exe"
+        executable = str(Path(tempfile.gettempdir()) / "Pinyin" / "pinyin_tones")
         with mock.patch.object(paths.sys, "frozen", True, create=True), \
              mock.patch.object(paths.sys, "executable", executable):
             self.assertEqual(paths.get_app_root(), str(Path(executable).parent))

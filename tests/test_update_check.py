@@ -128,7 +128,7 @@ class TestUpdateCheckHelpers(unittest.TestCase):
             update_check.urllib.request,
             "urlopen",
             return_value=FakeResponse(json.dumps(payload).encode("utf-8")),
-        ):
+        ), mock.patch.object(update_check.platform, "system", return_value="Windows"):
             release = update_check.fetch_latest_release()
         self.assertEqual(release.version, "0.2.0")
         self.assertEqual(release.asset_name, "pinyin-tones-windows.zip")
