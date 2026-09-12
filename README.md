@@ -55,6 +55,7 @@ Reemplazá la plataforma y elegí los formatos soportados: macOS usa `portable,d
 
 - Activá o desactivá la funcionalidad desde el ícono en la bandeja.
 - Escribí una sílaba de pinyin con número de tono, por ejemplo `ni3` o `hao3` —se reemplaza automáticamente por `nǐ` o `hǎo`.
+- En Windows, si el método de entrada activo es chino, japonés o coreano, la conversión se pausa para no interferir con la selección nativa de caracteres. El indicador de la bandeja cambia a amarillo mientras está pausada.
 
 ## Compatibilidad y permisos
 
