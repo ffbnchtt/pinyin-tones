@@ -88,4 +88,4 @@ pyinstaller --onefile --noconsole --name pinyin_tones --paths src --hidden-impor
 
 ## Publicar una release
 
-Crear un tag SemVer `vX.Y.Z` que coincida con `pyproject.toml` y `src/pinyin_tones/version.py` inicia el workflow de release. El workflow crea un borrador con los assets y `SHA256SUMS.txt`; publicalo sólo después de probar Windows, Mac Intel, Apple Silicon y Ubuntu con X11.
+Crear un tag SemVer `vX.Y.Z` que coincida con `pyproject.toml` y `src/pinyin_tones/version.py` inicia el workflow de release. El workflow crea un borrador con los assets y `SHA256SUMS.txt`; publicalo sólo después de probar Windows, Mac Intel, Apple Silicon y Ubuntu con X11. La descarga automática sólo acepta assets cuyo hash SHA-256 figura en ese archivo.

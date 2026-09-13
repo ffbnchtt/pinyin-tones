@@ -85,10 +85,15 @@ class UpdateAvailableDialog:
             text=f"Nueva versión: v{self.release.version}",
         ).grid(row=2, column=0, sticky="w", pady=(0, 10))
 
-        if self.release.asset_name:
+        can_download = bool(
+            self.release.asset_name
+            and self.release.asset_url
+            and self.release.checksum_url
+        )
+        if can_download:
             asset_text = f"Descarga disponible para este sistema: {self.release.asset_name}"
         else:
-            asset_text = "No hay un archivo específico para este sistema en la release."
+            asset_text = "No hay una descarga verificable para este sistema en la release."
         ttk.Label(
             container,
             text=asset_text,
@@ -102,7 +107,7 @@ class UpdateAvailableDialog:
             button_row,
             text="Descargar",
             command=self._download,
-            state="normal" if self.release.asset_name else "disabled",
+            state="normal" if can_download else "disabled",
         )
         later_button = ttk.Button(button_row, text="Recordarme después", command=self._remind_later)
 

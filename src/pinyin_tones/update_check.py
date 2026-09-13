@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
 import platform
-import shutil
 import subprocess
 import urllib.error
 import urllib.request
@@ -30,6 +30,7 @@ DOWNLOAD_ASSET_NAMES = {
     "macos": "pinyin-tones-macos.zip",
     "linux": "pinyin-tones-linux.zip",
 }
+CHECKSUM_ASSET_NAME = "SHA256SUMS.txt"
 
 
 def current_architecture(machine_name: str | None = None) -> str:
@@ -48,6 +49,7 @@ class ReleaseInfo:
     asset_name: Optional[str]
     asset_url: Optional[str]
     published_at: Optional[str]
+    checksum_url: Optional[str] = None
 
 
 @dataclass
@@ -113,6 +115,18 @@ def select_release_asset(
     return None, None
 
 
+def select_checksum_url(assets: list[dict[str, Any]]) -> Optional[str]:
+    """Return the download URL for the release checksum manifest."""
+    for asset in assets:
+        name = str(asset.get("name", "")).strip()
+        if name.lower() != CHECKSUM_ASSET_NAME.lower():
+            continue
+        url = asset.get("browser_download_url")
+        if url:
+            return str(url)
+    return None
+
+
 def parse_release_info(
     payload: dict[str, Any],
     platform_name: str | None = None,
@@ -124,9 +138,8 @@ def parse_release_info(
     version = normalize_version(tag)
     if not version or not html_url:
         return None
-    asset_name, asset_url = select_release_asset(
-        payload.get("assets") or [], platform_name, machine_name
-    )
+    assets = payload.get("assets") or []
+    asset_name, asset_url = select_release_asset(assets, platform_name, machine_name)
     return ReleaseInfo(
         version=version,
         tag=tag,
@@ -134,6 +147,7 @@ def parse_release_info(
         asset_name=asset_name,
         asset_url=asset_url,
         published_at=payload.get("published_at"),
+        checksum_url=select_checksum_url(assets),
     )
 
 
@@ -204,13 +218,24 @@ def existing_download_for_release(
     release: Optional[ReleaseInfo],
     downloaded_version: str | None,
     downloaded_path: str | None,
+    downloaded_checksum: str | None = None,
+    expected_checksum: str | None = None,
 ) -> Optional[str]:
-    """Return an existing download path if it still matches the release."""
+    """Return an existing verified download path if it still matches the release."""
     if release is None or not downloaded_path or not downloaded_version:
         return None
     if downloaded_version != release.version:
         return None
     if not os.path.exists(downloaded_path):
+        return None
+    if not is_sha256_checksum(downloaded_checksum):
+        return None
+    expected_checksum = expected_checksum or downloaded_checksum
+    if not is_sha256_checksum(expected_checksum):
+        return None
+    if downloaded_checksum.lower() != expected_checksum.lower():
+        return None
+    if file_sha256(downloaded_path) != expected_checksum.lower():
         return None
     return downloaded_path
 
@@ -219,6 +244,7 @@ def check_for_updates(
     current_version: str,
     downloaded_version: str | None = None,
     downloaded_path: str | None = None,
+    downloaded_checksum: str | None = None,
     repo: str = DEFAULT_REPO,
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
 ) -> UpdateState:
@@ -236,7 +262,12 @@ def check_for_updates(
     return UpdateState(
         status="available",
         latest_release=release,
-        downloaded_path=existing_download_for_release(release, downloaded_version, downloaded_path),
+        downloaded_path=existing_download_for_release(
+            release,
+            downloaded_version,
+            downloaded_path,
+            downloaded_checksum,
+        ),
     )
 
 
@@ -246,20 +277,73 @@ def ensure_download_dir(download_dir: str) -> str:
     return download_dir
 
 
-def download_release_asset(release: ReleaseInfo, download_dir: str, timeout: float = 30.0) -> str:
-    """Download the selected asset for a release and return its local path."""
+def is_sha256_checksum(value: str | None) -> bool:
+    """Return whether value is a lowercase-agnostic SHA-256 digest."""
+    if not isinstance(value, str) or len(value) != 64:
+        return False
+    return all(character in "0123456789abcdefABCDEF" for character in value)
+
+
+def checksum_for_asset(checksum_text: str, asset_name: str) -> str:
+    """Extract one asset's SHA-256 digest from a sha256sum-compatible manifest."""
+    for line in checksum_text.splitlines():
+        parts = line.split(maxsplit=1)
+        if len(parts) != 2:
+            continue
+        checksum, listed_name = parts
+        if listed_name.lstrip("*") != asset_name:
+            continue
+        if not is_sha256_checksum(checksum):
+            raise ValueError(f"Invalid SHA-256 checksum for release asset: {asset_name}")
+        return checksum.lower()
+    raise ValueError(f"SHA256SUMS.txt does not include release asset: {asset_name}")
+
+
+def fetch_release_checksum(release: ReleaseInfo, timeout: float = 30.0) -> str:
+    """Fetch the expected SHA-256 digest for the selected release asset."""
+    if not release.asset_name or not release.checksum_url:
+        raise ValueError("Release does not include a verifiable downloadable asset")
+    with urllib.request.urlopen(build_request(release.checksum_url), timeout=timeout) as response:
+        checksum_text = response.read().decode("utf-8")
+    return checksum_for_asset(checksum_text, release.asset_name)
+
+
+def file_sha256(path: str) -> str:
+    """Calculate a file SHA-256 digest without loading the file into memory."""
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def download_release_asset(
+    release: ReleaseInfo,
+    download_dir: str,
+    timeout: float = 30.0,
+    expected_checksum: str | None = None,
+) -> str:
+    """Download and verify the selected asset for a release."""
     if not release.asset_name or not release.asset_url:
         raise ValueError("Release does not include a compatible downloadable asset")
     os.makedirs(download_dir, exist_ok=True)
     asset_name = os.path.basename(release.asset_name)
     if asset_name != release.asset_name:
         raise ValueError("Release asset name must not include path separators")
+    expected_checksum = expected_checksum or fetch_release_checksum(release, timeout=timeout)
+    if not is_sha256_checksum(expected_checksum):
+        raise ValueError(f"Invalid SHA-256 checksum for release asset: {asset_name}")
     destination = os.path.join(download_dir, asset_name)
     partial_destination = f"{destination}.part"
     request = build_request(release.asset_url)
     try:
+        digest = hashlib.sha256()
         with urllib.request.urlopen(request, timeout=timeout) as response, open(partial_destination, "wb") as handle:
-            shutil.copyfileobj(response, handle)
+            for chunk in iter(lambda: response.read(1024 * 1024), b""):
+                handle.write(chunk)
+                digest.update(chunk)
+        if digest.hexdigest() != expected_checksum.lower():
+            raise ValueError(f"Downloaded update checksum does not match SHA256SUMS.txt: {asset_name}")
         os.replace(partial_destination, destination)
     except Exception:
         try:

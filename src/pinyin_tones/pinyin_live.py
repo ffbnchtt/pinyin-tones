@@ -237,6 +237,7 @@ DEFAULT_CONFIG = {
     "last_update_check_at": None,
     "downloaded_update_version": None,
     "downloaded_update_path": None,
+    "downloaded_update_checksum": None,
 }
 STOP_REQUESTED = threading.Event()
 DIALOG_TITLE = "Configuración"
@@ -607,13 +608,21 @@ class PinyinApp:
     def _prune_downloaded_update_state(self) -> None:
         downloaded_version = self.config.get("downloaded_update_version")
         downloaded_path = self.config.get("downloaded_update_path")
-        if not downloaded_version or not downloaded_path:
+        downloaded_checksum = self.config.get("downloaded_update_checksum")
+        if not downloaded_version and not downloaded_path and not downloaded_checksum:
+            return
+        if not downloaded_version or not downloaded_path or not downloaded_checksum:
+            self.config["downloaded_update_version"] = None
+            self.config["downloaded_update_path"] = None
+            self.config["downloaded_update_checksum"] = None
+            self._save_config()
             return
         if not os.path.exists(downloaded_path) or not _update_check.is_newer_version(
             downloaded_version, APP_VERSION
-        ):
+        ) or not _update_check.is_sha256_checksum(downloaded_checksum):
             self.config["downloaded_update_version"] = None
             self.config["downloaded_update_path"] = None
+            self.config["downloaded_update_checksum"] = None
             self._save_config()
 
     def _set_update_state(self, state: UpdateState) -> None:
@@ -657,6 +666,7 @@ class PinyinApp:
             current_version=APP_VERSION,
             downloaded_version=self.config.get("downloaded_update_version"),
             downloaded_path=self.config.get("downloaded_update_path"),
+            downloaded_checksum=self.config.get("downloaded_update_checksum"),
         )
         _update_check.mark_update_check(self.config)
         self._save_config()
@@ -713,14 +723,15 @@ class PinyinApp:
 
     def _can_open_download_folder(self, _item=None) -> bool:
         path = self.config.get("downloaded_update_path")
-        return bool(path and os.path.exists(path))
+        checksum = self.config.get("downloaded_update_checksum")
+        return bool(path and is_sha256_checksum(checksum) and os.path.exists(path))
 
     def _can_download_update(self, _item=None) -> bool:
         state = self._get_update_state()
         if state.status != "available":
             return False
         release = state.latest_release
-        if release is None or not release.asset_name:
+        if release is None or not release.asset_name or not release.checksum_url:
             return False
         return bool(release.asset_url)
 
@@ -742,44 +753,36 @@ class PinyinApp:
         """Download the latest compatible release asset and guide the user."""
         state = self._get_update_state()
         release = state.latest_release
-        if release is None or not release.asset_name:
-            logger.info("No compatible downloadable asset found for latest release")
+        if release is None or not release.asset_name or not release.asset_url or not release.checksum_url:
+            logger.info("No compatible verified download found for latest release")
             messagebox.showinfo(
                 "Actualización",
-                "No hay una descarga automática disponible para este sistema en esta release.",
+                "No hay una descarga automática verificable para este sistema en esta release.",
             )
             return True
-        if not release.asset_url:
-            logger.info("No compatible downloadable asset found for latest release")
-            messagebox.showinfo(
-                "Actualización",
-                "No hay una descarga automática disponible para este sistema en esta release.",
-            )
-            return True
-        existing_path = _update_check.existing_download_for_release(
-            release,
-            self.config.get("downloaded_update_version"),
-            self.config.get("downloaded_update_path"),
-        )
         try:
+            logger.info(
+                "Downloading verified update version=%s asset=%s",
+                release.version,
+                release.asset_name,
+            )
+            expected_checksum = _update_check.fetch_release_checksum(release)
+            existing_path = _update_check.existing_download_for_release(
+                release,
+                self.config.get("downloaded_update_version"),
+                self.config.get("downloaded_update_path"),
+                self.config.get("downloaded_update_checksum"),
+                expected_checksum,
+            )
             if existing_path is None:
-                logger.info(
-                    "Downloading update version=%s asset=%s",
-                    release.version,
-                    release.asset_name,
-                )
                 existing_path = _update_check.download_release_asset(
                     release,
                     self._downloads_dir(),
-                )
-            else:
-                logger.info(
-                    "Reusing previously downloaded update version=%s path=%s",
-                    release.version,
-                    existing_path,
+                    expected_checksum=expected_checksum,
                 )
             self.config["downloaded_update_version"] = release.version
             self.config["downloaded_update_path"] = existing_path
+            self.config["downloaded_update_checksum"] = expected_checksum
             self._save_config()
             state.downloaded_path = existing_path
             self._set_update_state(state)

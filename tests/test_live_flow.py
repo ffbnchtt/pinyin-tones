@@ -917,6 +917,7 @@ class TestUpdateController(unittest.TestCase):
                 asset_name="pinyin-tones-windows.zip",
                 asset_url="https://example/file.zip",
                 published_at=None,
+                checksum_url="https://example/SHA256SUMS.txt",
             ),
         )
 
@@ -960,6 +961,7 @@ class TestUpdateController(unittest.TestCase):
                 asset_name="pinyin-tones-windows.zip",
                 asset_url="https://example/file.zip",
                 published_at=None,
+                checksum_url="https://example/SHA256SUMS.txt",
             ),
         )
 
@@ -981,6 +983,7 @@ class TestUpdateController(unittest.TestCase):
                 asset_name="pinyin-tones-windows.zip",
                 asset_url="https://example/file.zip",
                 published_at=None,
+                checksum_url="https://example/SHA256SUMS.txt",
             ),
         )
         self.assertTrue(app._can_download_update())

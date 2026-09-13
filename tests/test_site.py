@@ -33,6 +33,26 @@ class TestDownloadSite(unittest.TestCase):
         self.assertIn('data-en=', index)
         self.assertNotIn('api.github.com', script)
 
+    def test_hero_animates_numeric_pinyin_conversion_accessibly(self):
+        index = (SITE_DIR / 'index.html').read_text(encoding='utf-8')
+        styles = (SITE_DIR / 'styles.css').read_text(encoding='utf-8')
+        script = (SITE_DIR / 'app.js').read_text(encoding='utf-8')
+
+        self.assertIn('Escribí los tonos sin detenerte.', index)
+        self.assertIn('class="typing-demo" aria-hidden="true"', index)
+        self.assertIn('id="typing-demo-text"', index)
+        self.assertIn('Ejemplo: ni3 hao3 se convierte en nǐ hǎo.', index)
+        self.assertNotIn('conversion-card', index)
+        self.assertIn("{ text: 'ni3'", script)
+        self.assertIn("{ text: 'nǐ', delay: 450 }", script)
+        self.assertIn("{ text: 'nǐ hao3'", script)
+        self.assertIn("{ text: 'nǐ hǎo'", script)
+        self.assertLess(script.index("{ text: 'ni3'"), script.index("{ text: 'nǐ', delay: 450 }"))
+        self.assertLess(script.index("{ text: 'nǐ hao3'"), script.index("{ text: 'nǐ hǎo'"))
+        self.assertIn('border:2px solid var(--sun)', styles)
+        self.assertIn("prefers-reduced-motion: reduce", script)
+        self.assertIn('@media (prefers-reduced-motion:reduce)', styles)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -121,7 +121,11 @@ class TestUpdateCheckHelpers(unittest.TestCase):
                 {
                     "name": "pinyin-tones-windows.zip",
                     "browser_download_url": "https://example/windows.zip",
-                }
+                },
+                {
+                    "name": "SHA256SUMS.txt",
+                    "browser_download_url": "https://example/SHA256SUMS.txt",
+                },
             ],
         }
         with mock.patch.object(
@@ -132,6 +136,7 @@ class TestUpdateCheckHelpers(unittest.TestCase):
             release = update_check.fetch_latest_release()
         self.assertEqual(release.version, "0.2.0")
         self.assertEqual(release.asset_name, "pinyin-tones-windows.zip")
+        self.assertEqual(release.checksum_url, "https://example/SHA256SUMS.txt")
 
     def test_should_check_for_updates_uses_interval(self):
         now = datetime(2026, 6, 2, tzinfo=timezone.utc)
@@ -156,12 +161,16 @@ class TestUpdateCheckHelpers(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "pinyin-tones-windows.zip"
             path.write_text("zip", encoding="utf-8")
+            checksum = update_check.file_sha256(str(path))
             self.assertEqual(
-                update_check.existing_download_for_release(release, "0.2.0", str(path)),
+                update_check.existing_download_for_release(release, "0.2.0", str(path), checksum),
                 str(path),
             )
             self.assertIsNone(
-                update_check.existing_download_for_release(release, "0.1.0", str(path))
+                update_check.existing_download_for_release(release, "0.1.0", str(path), checksum)
+            )
+            self.assertIsNone(
+                update_check.existing_download_for_release(release, "0.2.0", str(path), "0" * 64)
             )
 
     def test_check_for_updates_returns_available_state(self):
@@ -220,17 +229,52 @@ class TestUpdateCheckHelpers(unittest.TestCase):
             asset_name="pinyin-tones-windows.zip",
             asset_url="https://example/windows.zip",
             published_at=None,
+            checksum_url="https://example/SHA256SUMS.txt",
         )
         with tempfile.TemporaryDirectory() as temp_dir:
+            checksum = update_check.file_sha256(__file__)
+            checksum_manifest = f"{checksum}  pinyin-tones-windows.zip\n".encode("utf-8")
             with mock.patch.object(
                 update_check.urllib.request,
                 "urlopen",
-                return_value=FakeResponse(b"zip-content"),
+                side_effect=[FakeResponse(checksum_manifest), FakeResponse(Path(__file__).read_bytes())],
             ):
                 path = update_check.download_release_asset(release, temp_dir)
             self.assertTrue(Path(path).exists())
-            self.assertEqual(Path(path).read_bytes(), b"zip-content")
+            self.assertEqual(Path(path).read_bytes(), Path(__file__).read_bytes())
             self.assertFalse(Path(f"{path}.part").exists())
+
+    def test_download_release_asset_rejects_checksum_mismatch(self):
+        release = update_check.ReleaseInfo(
+            version="0.2.0",
+            tag="v0.2.0",
+            html_url="https://example/release",
+            asset_name="pinyin-tones-windows.zip",
+            asset_url="https://example/windows.zip",
+            published_at=None,
+            checksum_url="https://example/SHA256SUMS.txt",
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            checksum_manifest = f"{'0' * 64}  pinyin-tones-windows.zip\n".encode("utf-8")
+            with mock.patch.object(
+                update_check.urllib.request,
+                "urlopen",
+                side_effect=[FakeResponse(checksum_manifest), FakeResponse(b"zip-content")],
+            ):
+                with self.assertRaisesRegex(ValueError, "checksum does not match"):
+                    update_check.download_release_asset(release, temp_dir)
+
+            self.assertFalse((Path(temp_dir) / "pinyin-tones-windows.zip").exists())
+            self.assertFalse((Path(temp_dir) / "pinyin-tones-windows.zip.part").exists())
+
+    def test_checksum_for_asset_rejects_missing_or_invalid_hash(self):
+        with self.assertRaisesRegex(ValueError, "does not include"):
+            update_check.checksum_for_asset("", "pinyin-tones-windows.zip")
+        with self.assertRaisesRegex(ValueError, "Invalid SHA-256"):
+            update_check.checksum_for_asset(
+                "not-a-checksum  pinyin-tones-windows.zip\n",
+                "pinyin-tones-windows.zip",
+            )
 
     def test_ensure_download_dir_uses_exact_directory(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -260,12 +304,14 @@ class TestUpdateCheckHelpers(unittest.TestCase):
             asset_name="pinyin-tones-windows.zip",
             asset_url="https://example/windows.zip",
             published_at=None,
+            checksum_url="https://example/SHA256SUMS.txt",
         )
         with tempfile.TemporaryDirectory() as temp_dir:
+            manifest = ("0" * 64 + "  pinyin-tones-windows.zip\n").encode("utf-8")
             with mock.patch.object(
                 update_check.urllib.request,
                 "urlopen",
-                return_value=FailingResponse(),
+                side_effect=[FakeResponse(manifest), FailingResponse()],
             ):
                 with self.assertRaises(OSError):
                     update_check.download_release_asset(release, temp_dir)

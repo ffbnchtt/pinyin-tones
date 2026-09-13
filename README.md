@@ -79,6 +79,7 @@ Además, la app guarda estado interno para actualizaciones:
 - `last_update_check_at`
 - `downloaded_update_version`
 - `downloaded_update_path`
+- `downloaded_update_checksum`
 
 Para ajustes avanzados de reemplazo, revisá `src/pinyin_tones/pinyin_converter.py` y `src/pinyin_tones/pinyin_live.py`.
 
