@@ -18,6 +18,10 @@ class TestBuildReleaseHelpers(unittest.TestCase):
         self.assertIn('[[ "$MACOS_SIGNING_ENABLED" == "true"', workflow)
         self.assertIn('gh release view "${GITHUB_REF_NAME}"', workflow)
         self.assertIn('gh release upload "${GITHUB_REF_NAME}" release/* --clobber', workflow)
+        self.assertIn(
+            'draft:\n    needs: build\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4',
+            workflow,
+        )
 
     def test_normalize_platform_name_maps_python_platform_values(self):
         self.assertEqual(build_release.normalize_platform_name('Darwin'), 'macos')
