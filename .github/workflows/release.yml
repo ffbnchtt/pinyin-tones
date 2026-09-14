@@ -75,7 +75,13 @@ jobs:
             bash packaging/macos/sign_and_notarize.sh ${{ matrix.arch }}
           else
             echo "::warning::Building unsigned, non-notarized macOS ZIP artifacts."
-            python tools/build_release.py --platform macos --arch ${{ matrix.arch }} --formats portable
+            macos_build_log="$RUNNER_TEMP/macos-unsigned-build.log"
+            if ! python tools/build_release.py --platform macos --arch ${{ matrix.arch }} --formats portable > "$macos_build_log" 2>&1; then
+              while IFS= read -r error_line; do
+                echo "::error::$error_line"
+              done < <(tail -n 40 "$macos_build_log")
+              exit 1
+            fi
           fi
       - name: Build Windows or Linux artifacts
         if: matrix.platform != 'macos'
