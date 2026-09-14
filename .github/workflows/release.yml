@@ -126,8 +126,20 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
-            gh release upload "${GITHUB_REF_NAME}" release/* --clobber
-          else
-            gh release create "${GITHUB_REF_NAME}" release/* --draft --title "${GITHUB_REF_NAME}" --generate-notes
+          create_or_update_release() {
+            if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+              gh release upload "${GITHUB_REF_NAME}" release/* --clobber
+            else
+              gh release create "${GITHUB_REF_NAME}" release/* --draft --title "${GITHUB_REF_NAME}" --generate-notes
+            fi
+          }
+
+          if ! release_output="$(create_or_update_release 2>&1)"; then
+            while IFS= read -r release_line; do
+              release_line="${release_line//'%'/'%25'}"
+              release_line="${release_line//$'\r'/'%0D'}"
+              release_line="${release_line//$'\n'/'%0A'}"
+              echo "::error::GitHub release: $release_line"
+            done <<< "$release_output"
+            exit 1
           fi
