@@ -74,8 +74,8 @@ jobs:
             python tools/build_release.py --platform macos --arch ${{ matrix.arch }} --formats portable
             bash packaging/macos/sign_and_notarize.sh ${{ matrix.arch }}
           else
-            echo "::warning::Building unsigned, non-notarized macOS artifacts."
-            python tools/build_release.py --platform macos --arch ${{ matrix.arch }} --formats portable,dmg
+            echo "::warning::Building unsigned, non-notarized macOS ZIP artifacts."
+            python tools/build_release.py --platform macos --arch ${{ matrix.arch }} --formats portable
           fi
       - name: Build Windows or Linux artifacts
         if: matrix.platform != 'macos'

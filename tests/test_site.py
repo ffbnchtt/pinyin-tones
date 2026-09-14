@@ -15,8 +15,8 @@ class TestDownloadSite(unittest.TestCase):
         index = (SITE_DIR / 'index.html').read_text(encoding='utf-8')
         expected_assets = (
             'pinyin-tones-windows.zip',
-            'pinyin-tones-macos-arm64.dmg',
-            'pinyin-tones-macos-x64.dmg',
+            'pinyin-tones-macos-arm64.zip',
+            'pinyin-tones-macos-x64.zip',
             'pinyin-tones-macos.zip',
             'pinyin-tones-linux-amd64.deb',
             'pinyin-tones-linux-x86_64.AppImage',

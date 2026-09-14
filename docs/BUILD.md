@@ -71,5 +71,5 @@ pyinstaller --onefile --noconsole --name pinyin_tones --paths src --hidden-impor
 ```
 
 Permisos especiales:
-- macOS: conceder Accesibilidad y, si el sistema lo solicita, Input Monitoring. Una firma Developer ID y la notarización no son necesarias para compilar, pero sí son recomendables para evitar advertencias de Gatekeeper en una distribución pública. Sin credenciales, el workflow genera ZIP y DMG sin firma.
+- macOS: conceder Accesibilidad y, si el sistema lo solicita, Input Monitoring. Una firma Developer ID y la notarización no son necesarias para compilar, pero sí son recomendables para evitar advertencias de Gatekeeper en una distribución pública. Sin credenciales, el workflow genera ZIPs portables sin firma.
 - Linux: la primera matriz soportada es Ubuntu 22.04+ x64 con X11. En Wayland, pynput puede no recibir el teclado global o sólo operar mediante Xwayland.
