@@ -39,7 +39,7 @@ jobs:
         shell: bash
         run: |
           expected="${GITHUB_REF_NAME#v}"
-          project_version="$(python -c "from tools.build_release import project_version; print(project_version())")"
+          project_version="$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")"
           runtime_version="$(python -c "import sys; sys.path.insert(0, 'src'); from pinyin_tones.version import __version__; print(__version__)")"
           test "$expected" = "$project_version"
           test "$expected" = "$runtime_version"
