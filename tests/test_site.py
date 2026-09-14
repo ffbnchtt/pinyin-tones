@@ -49,7 +49,7 @@ class TestDownloadSite(unittest.TestCase):
         self.assertIn("{ text: 'nǐ hǎo'", script)
         self.assertLess(script.index("{ text: 'ni3'"), script.index("{ text: 'nǐ', delay: 450 }"))
         self.assertLess(script.index("{ text: 'nǐ hao3'"), script.index("{ text: 'nǐ hǎo'"))
-        self.assertIn('border:2px solid var(--sun)', styles)
+        self.assertIn('border:2px solid var(--accent-soft)', styles)
         self.assertIn("prefers-reduced-motion: reduce", script)
         self.assertIn('@media (prefers-reduced-motion:reduce)', styles)
 

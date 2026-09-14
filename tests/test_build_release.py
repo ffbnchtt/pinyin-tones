@@ -218,7 +218,7 @@ class TestBuildReleaseHelpers(unittest.TestCase):
         desktop_entry = build_release.linux_desktop_entry()
         self.assertIn('Name=Pinyin Tones', desktop_entry)
         self.assertIn('Exec=pinyin-tones', desktop_entry)
-        self.assertIn('X-AppImage-Version=1.0.0', desktop_entry)
+        self.assertIn('X-AppImage-Version=1.0.1', desktop_entry)
 
     def test_build_windows_tk_options_includes_tkinter_runtime_files(self):
         with tempfile.TemporaryDirectory() as temp_dir:

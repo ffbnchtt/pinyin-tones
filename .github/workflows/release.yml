@@ -54,10 +54,7 @@ jobs:
           curl -fL --retry 3 -o "$RUNNER_TEMP/appimagetool" \
             https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
           chmod +x "$RUNNER_TEMP/appimagetool"
-      - name: Build unsigned portable macOS payload
-        if: matrix.platform == 'macos'
-        run: python tools/build_release.py --platform macos --arch ${{ matrix.arch }} --formats portable
-      - name: Sign and notarize macOS artifacts
+      - name: Build macOS artifacts and sign when credentials are configured
         if: matrix.platform == 'macos'
         shell: bash
         env:
@@ -67,7 +64,19 @@ jobs:
           APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
-        run: bash packaging/macos/sign_and_notarize.sh ${{ matrix.arch }}
+        run: |
+          if [[ -n "$MACOS_CERTIFICATE_P12_BASE64" \
+            && -n "$MACOS_CERTIFICATE_PASSWORD" \
+            && -n "$MACOS_SIGNING_IDENTITY" \
+            && -n "$APPLE_API_KEY_P8_BASE64" \
+            && -n "$APPLE_API_KEY_ID" \
+            && -n "$APPLE_API_ISSUER_ID" ]]; then
+            python tools/build_release.py --platform macos --arch ${{ matrix.arch }} --formats portable
+            bash packaging/macos/sign_and_notarize.sh ${{ matrix.arch }}
+          else
+            echo "::warning::Building unsigned, non-notarized macOS artifacts."
+            python tools/build_release.py --platform macos --arch ${{ matrix.arch }} --formats portable,dmg
+          fi
       - name: Build Windows or Linux artifacts
         if: matrix.platform != 'macos'
         shell: bash

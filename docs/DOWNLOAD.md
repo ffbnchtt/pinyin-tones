@@ -5,7 +5,7 @@
 Las releases ofrecen una variante portable y, cuando corresponde, una variante instalable:
 
 - Windows: `pinyin-tones-windows.zip`.
-- macOS: DMG firmado para Apple Silicon o Intel; también ZIPs portables.
+- macOS: DMG para Apple Silicon o Intel; también ZIPs portables. Cuando una release no esté firmada ni notarizada, Gatekeeper puede impedir abrirla hasta que el usuario confirme que confía en el origen.
 - Linux x64: `pinyin-tones-linux-amd64.deb` para Ubuntu/Debian, AppImage portable y ZIP portable.
 
 La ventana de configuración incluye una opción para iniciar la aplicación automáticamente con el sistema operativo. En AppImage, la app guarda la ruta del archivo AppImage original para que el inicio automático persista después de cerrar sesión.
