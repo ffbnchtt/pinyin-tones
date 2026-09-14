@@ -58,6 +58,7 @@ jobs:
         if: matrix.platform == 'macos'
         shell: bash
         env:
+          MACOS_SIGNING_ENABLED: ${{ vars.MACOS_SIGNING_ENABLED }}
           MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
           MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
           MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
@@ -65,7 +66,8 @@ jobs:
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
         run: |
-          if [[ -n "$MACOS_CERTIFICATE_P12_BASE64" \
+          if [[ "$MACOS_SIGNING_ENABLED" == "true" \
+            && -n "$MACOS_CERTIFICATE_P12_BASE64" \
             && -n "$MACOS_CERTIFICATE_PASSWORD" \
             && -n "$MACOS_SIGNING_IDENTITY" \
             && -n "$APPLE_API_KEY_P8_BASE64" \

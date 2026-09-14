@@ -7,7 +7,16 @@ from unittest import mock
 from tools import build_release
 
 
+ROOT_DIR = Path(__file__).resolve().parents[1]
+
+
 class TestBuildReleaseHelpers(unittest.TestCase):
+    def test_release_workflow_requires_explicit_macos_signing_flag(self):
+        workflow = (ROOT_DIR / '.github' / 'workflows' / 'release.yml').read_text(encoding='utf-8')
+
+        self.assertIn('MACOS_SIGNING_ENABLED: ${{ vars.MACOS_SIGNING_ENABLED }}', workflow)
+        self.assertIn('[[ "$MACOS_SIGNING_ENABLED" == "true"', workflow)
+
     def test_normalize_platform_name_maps_python_platform_values(self):
         self.assertEqual(build_release.normalize_platform_name('Darwin'), 'macos')
         self.assertEqual(build_release.normalize_platform_name('Windows'), 'windows')

@@ -12,7 +12,7 @@
 
 El workflow puede crear los assets de los tres sistemas sin certificados. Si faltan los secretos de macOS, publica ZIPs sin firma ni notarización; probalos y dejá esa condición explícita en las notas de la release para que los usuarios sepan que Gatekeeper puede mostrar una advertencia.
 
-Para publicar macOS firmado y notarizado, configurá estos secretos antes de crear el tag:
+Para publicar macOS firmado y notarizado, configurá estos secretos y la variable de repositorio `MACOS_SIGNING_ENABLED` con el valor `true` antes de crear el tag:
 
 - `MACOS_CERTIFICATE_P12_BASE64`
 - `MACOS_CERTIFICATE_PASSWORD`
