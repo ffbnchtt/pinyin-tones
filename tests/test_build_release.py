@@ -84,6 +84,20 @@ class TestBuildReleaseHelpers(unittest.TestCase):
         self.assertIn('--target-architecture', command)
         self.assertIn('arm64', command)
 
+    def test_configure_macos_menu_bar_bundle_hides_dock_icon(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            app_bundle = Path(temp_dir) / 'pinyin_tones.app'
+            info_plist = app_bundle / 'Contents' / 'Info.plist'
+            info_plist.parent.mkdir(parents=True)
+            with info_plist.open('wb') as handle:
+                build_release.plistlib.dump({'CFBundleName': 'Pinyin Tones'}, handle)
+
+            build_release.configure_macos_menu_bar_bundle(app_bundle)
+
+            with info_plist.open('rb') as handle:
+                info = build_release.plistlib.load(handle)
+            self.assertTrue(info['LSUIElement'])
+
     def test_build_pyinstaller_command_linux_has_no_icon_flag(self):
         icon_assets = {'ico': Path('C:/tmp/pinyin_tones.ico'), 'icns': Path('C:/tmp/pinyin_tones.icns'), 'png': Path('C:/tmp/pinyin_tones.png')}
         command = build_release.build_pyinstaller_command('linux', icon_assets)

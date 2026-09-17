@@ -886,6 +886,59 @@ class TestStartupFailureHandling(unittest.TestCase):
 
         self.assertTrue(pinyin_live.STOP_REQUESTED.is_set())
 
+    def test_start_defers_macos_tray_to_main_loop(self):
+        class FakeListener:
+            def start(self):
+                pass
+
+            def stop(self):
+                pass
+
+        app = object.__new__(pinyin_live.PinyinApp)
+        app.autostart_enabled = False
+        app.autostart_config = pinyin_live.build_autostart_config()
+        app.type_listener = FakeListener()
+        app.toggle_listener = FakeListener()
+        app.input_method_monitor_stop = pinyin_live.threading.Event()
+        app.input_method_monitor_thread = None
+        app.refresh_input_method_state = mock.Mock(return_value=False)
+        app.request_update_check = mock.Mock()
+
+        with mock.patch.object(pinyin_live.platform, "system", return_value="Darwin"), \
+             mock.patch.object(input_method_mod, "is_detection_supported", return_value=False), \
+             mock.patch.object(pinyin_live.threading, "Thread") as fake_thread:
+            pinyin_live.PinyinApp.start(app)
+
+        app.request_update_check.assert_called_once_with()
+        fake_thread.assert_not_called()
+
+    def test_run_main_loop_runs_macos_tray_on_main_thread(self):
+        app = mock.Mock()
+        app.hotkey = pinyin_live.DEFAULT_HOTKEY
+        app.hotkey_modifiers, app.hotkey_trigger = pinyin_live.parse_hotkey(app.hotkey)
+
+        with mock.patch.object(pinyin_live, "PinyinApp", return_value=app), \
+             mock.patch.object(pinyin_live.platform, "system", return_value="Darwin"):
+            pinyin_live._run_main_loop()
+
+        app.start.assert_called_once_with()
+        app._run_tray_safe.assert_called_once_with()
+        app.stop.assert_called_once_with()
+
+    def test_open_settings_runs_dialog_from_macos_tray_callback(self):
+        app = object.__new__(pinyin_live.PinyinApp)
+        pinyin_live.SETTINGS_REQUESTED.clear()
+
+        with mock.patch.object(pinyin_live.platform, "system", return_value="Darwin"), \
+             mock.patch.object(
+                 pinyin_live,
+                 "run_hotkey_settings_dialog_for_app",
+             ) as fake_dialog:
+            app.open_settings()
+
+        fake_dialog.assert_called_once_with(app)
+        self.assertFalse(pinyin_live.SETTINGS_REQUESTED.is_set())
+
     def test_run_main_loop_shows_startup_error_when_start_fails(self):
         app = mock.Mock()
         app.hotkey = pinyin_live.DEFAULT_HOTKEY

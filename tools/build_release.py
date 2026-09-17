@@ -287,6 +287,18 @@ def find_artifact_path(platform_name: str) -> Path:
     raise FileNotFoundError(f'Build artifact not found in {DIST_DIR}')
 
 
+def configure_macos_menu_bar_bundle(app_bundle: Path) -> None:
+    """Mark the macOS bundle as a menu-bar app instead of a Dock app."""
+    info_plist = app_bundle / 'Contents' / 'Info.plist'
+    if not info_plist.is_file():
+        raise FileNotFoundError(f'macOS app Info.plist not found: {info_plist}')
+    with info_plist.open('rb') as handle:
+        info = plistlib.load(handle)
+    info['LSUIElement'] = True
+    with info_plist.open('wb') as handle:
+        plistlib.dump(info, handle)
+
+
 def release_payload_directory(platform_name: str, architecture: str | None = None) -> Path:
     """Return the staging directory for a platform-specific release payload."""
     if architecture is None:
@@ -675,6 +687,8 @@ def build(
         command = build_pyinstaller_command(platform_name, icon_assets, architecture)
         run_pyinstaller(command, platform_name)
         artifact_path = find_artifact_path(platform_name)
+        if platform_name == 'macos':
+            configure_macos_menu_bar_bundle(artifact_path)
         release_dir = copy_release_payload(platform_name, artifact_path, icon_assets, architecture)
         remove_standalone_artifact(artifact_path, release_dir)
     artifacts = package_existing_payload(platform_name, architecture, formats, icon_assets)

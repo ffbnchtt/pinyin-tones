@@ -463,7 +463,11 @@ class PinyinApp:
             if _input_method.is_detection_supported():
                 self._start_input_method_monitor()
             self.request_update_check()
-            threading.Thread(target=self._run_tray_safe, daemon=True).start()
+            # AppKit requires menu-bar UI to be created on the main thread.
+            # On macOS _run_main_loop() runs the tray loop after startup; other
+            # platforms keep the existing background tray loop.
+            if platform.system() != "Darwin":
+                threading.Thread(target=self._run_tray_safe, daemon=True).start()
         except Exception:
             logger.exception("Failed to start application listeners")
             self.stop()
@@ -850,6 +854,12 @@ class PinyinApp:
         if CONFIG_DIALOG_OPEN.is_set():
             return
         logger.info("Tray requested settings dialog")
+        if platform.system() == "Darwin":
+            # The menu callback is dispatched by AppKit on the main thread.
+            # Handle the dialog there because the main thread is occupied by
+            # the macOS tray loop.
+            run_hotkey_settings_dialog_for_app(self)
+            return
         SETTINGS_REQUESTED.set()
 
     def _toggle_on_press(self, key):
@@ -1025,6 +1035,12 @@ def _run_main_loop():
         show_startup_error(exc)
         return
     try:
+        if platform.system() == "Darwin":
+            # pystray's macOS backend creates AppKit objects, which must run on
+            # the process main thread. Running this in a daemon thread causes
+            # NSInternalInconsistencyException before the menu-bar icon appears.
+            app._run_tray_safe()
+            return
         while not STOP_REQUESTED.is_set():
             if SETTINGS_REQUESTED.is_set() and not CONFIG_DIALOG_OPEN.is_set():
                 SETTINGS_REQUESTED.clear()
