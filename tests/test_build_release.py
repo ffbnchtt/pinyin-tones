@@ -16,6 +16,8 @@ class TestBuildReleaseHelpers(unittest.TestCase):
 
         self.assertIn('MACOS_SIGNING_ENABLED: ${{ vars.MACOS_SIGNING_ENABLED }}', workflow)
         self.assertIn('[[ "$MACOS_SIGNING_ENABLED" == "true"', workflow)
+        self.assertIn('  verify:\n    runs-on: ubuntu-latest', workflow)
+        self.assertIn('  build:\n    needs: verify', workflow)
         self.assertIn('gh release view "${GITHUB_REF_NAME}"', workflow)
         self.assertIn('gh release upload "${GITHUB_REF_NAME}" release/* --clobber', workflow)
         self.assertIn(
@@ -247,7 +249,10 @@ class TestBuildReleaseHelpers(unittest.TestCase):
         desktop_entry = build_release.linux_desktop_entry()
         self.assertIn('Name=Pinyin Tones', desktop_entry)
         self.assertIn('Exec=pinyin-tones', desktop_entry)
-        self.assertIn('X-AppImage-Version=1.0.1', desktop_entry)
+        self.assertIn(
+            f'X-AppImage-Version={build_release.project_version()}',
+            desktop_entry,
+        )
 
     def test_build_windows_tk_options_includes_tkinter_runtime_files(self):
         with tempfile.TemporaryDirectory() as temp_dir:
